@@ -1,31 +1,10 @@
-version: '3.8'
-
 services:
-  traefik:
-    image: traefik:v2.11
-    command:
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=fmeleard@gmail.com"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - letsencrypt:/letsencrypt
-
   redis:
     image: redis:7-alpine
     volumes:
       - redis-data:/data
+    networks:
+      - internal
 
   api:
     build:
@@ -36,14 +15,18 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CORS_ORIGIN=https://agent-all.ialla.fr
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`agent-all.ialla.fr`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.api.loadbalancer.server.port=3001"
-      - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
-      - "traefik.http.routers.api.middlewares=api-strip"
+      - "traefik.http.routers.agent-all-api.rule=Host(`agent-all.ialla.fr`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.agent-all-api.entrypoints=websecure"
+      - "traefik.http.routers.agent-all-api.tls.certresolver=myresolver"
+      - "traefik.http.services.agent-all-api.loadbalancer.server.port=3001"
+      - "traefik.http.middlewares.agent-all-api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.agent-all-api.middlewares=agent-all-api-strip"
+    networks:
+      - traefik_proxy
+      - internal
     depends_on:
       - redis
 
@@ -56,6 +39,8 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+    networks:
+      - internal
     depends_on:
       - redis
 
@@ -69,13 +54,20 @@ services:
         - NEXT_PUBLIC_API_URL=https://agent-all.ialla.fr/api
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.web.rule=Host(`agent-all.ialla.fr`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.web.loadbalancer.server.port=3000"
+      - "traefik.http.routers.agent-all-web.rule=Host(`agent-all.ialla.fr`)"
+      - "traefik.http.routers.agent-all-web.entrypoints=websecure"
+      - "traefik.http.routers.agent-all-web.tls.certresolver=myresolver"
+      - "traefik.http.services.agent-all-web.loadbalancer.server.port=3000"
+      - "traefik.http.routers.agent-all-web.priority=1"
+    networks:
+      - traefik_proxy
     depends_on:
       - api
 
+networks:
+  traefik_proxy:
+    external: true
+  internal:
+
 volumes:
   redis-data:
-  letsencrypt:
