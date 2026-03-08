@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { BullModule } from '@nestjs/bullmq'
+import { AuthModule } from './auth/auth.module'
+import { CompanyModule } from './company/company.module'
+import { OrchestratorModule } from './orchestrator/orchestrator.module'
 
 @Module({
   imports: [
@@ -11,6 +14,9 @@ import { BullModule } from '@nestjs/bullmq'
         port: parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
+    AuthModule,
+    CompanyModule,
+    OrchestratorModule,
   ],
 })
 export class AppModule {}
