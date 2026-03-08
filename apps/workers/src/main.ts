@@ -2,6 +2,9 @@ import 'dotenv/config'
 import { AgentRegistry } from '@agent-all/agent-registry'
 import { getSupabaseServiceClient } from '@agent-all/database'
 import { TaskProcessor } from './task-processor'
+import { EmailAgent } from './agents/email/email-agent'
+import { DocumentAgent } from './agents/document/document-agent'
+import { AccountingAgent } from './agents/accounting/accounting-agent'
 
 async function main() {
   console.log('Starting Agent All Workers...')
@@ -9,10 +12,11 @@ async function main() {
   const db = getSupabaseServiceClient()
   const registry = new AgentRegistry(db)
 
-  // Agents will be registered here (Tasks 13-15)
-  // registry.register(new EmailAgent())
-  // registry.register(new DocumentAgent())
-  // registry.register(new AccountingAgent())
+  // Register all agents
+  registry.register(new EmailAgent())
+  registry.register(new DocumentAgent())
+  registry.register(new AccountingAgent())
+  console.log('Registered 3 agents: email-agent, document-agent, accounting-agent')
 
   const processor = new TaskProcessor(registry, {
     host: process.env.REDIS_HOST || 'localhost',
