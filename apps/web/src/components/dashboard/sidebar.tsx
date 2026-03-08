@@ -37,13 +37,13 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-64 min-h-screen bg-slate-900 text-white flex flex-col">
-      <div className="p-6 border-b border-slate-700">
-        <h1 className="text-xl font-bold">Agent All</h1>
-        <p className="text-sm text-slate-400 mt-1">AI Operating System</p>
+    <aside className="w-60 min-h-screen border-r bg-neutral-50/50 flex flex-col">
+      <div className="p-6 border-b">
+        <h1 className="text-lg font-semibold tracking-tight">Agent All</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">AI Operating System</p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-3 space-y-0.5">
         {navItems.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== '/dashboard' && pathname.startsWith(item.href))
@@ -52,10 +52,10 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                 isActive
-                  ? 'bg-white/10 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-violet-50 text-violet-700 font-medium'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -65,10 +65,10 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-slate-700">
+      <div className="p-3 border-t">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 w-full transition-colors"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground w-full transition-colors"
         >
           <LogOut className="w-4 h-4" />
           Deconnexion

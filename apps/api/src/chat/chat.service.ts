@@ -17,36 +17,26 @@ export class ChatService {
       throw new Error(`Workspace ${workspaceId} not found`)
     }
 
-    // 2. Store user message
-    await this.workspaceService.addMessage(workspaceId, 'user', userMessage)
+    // 2. Store user message + get history in parallel
+    const [, messages] = await Promise.all([
+      this.workspaceService.addMessage(workspaceId, 'user', userMessage),
+      this.workspaceService.getMessages(workspaceId, 20),
+    ])
 
-    // 3. Index user message in RAG
-    try {
-      await indexDocument(
-        COLLECTIONS.CONVERSATIONS,
-        { content: userMessage, metadata: { role: 'user' } },
-        workspaceId,
-        userId,
-      )
-    } catch (err) {
-      this.logger.warn(`Failed to index user message in RAG: ${err}`)
-    }
-
-    // 4. Get conversation history (last 20 messages)
-    const messages = await this.workspaceService.getMessages(workspaceId, 20)
-
-    // 5. Search RAG for relevant context
+    // 3. Search RAG only if enough conversation history (skip for first few messages)
     let ragContext = ''
-    try {
-      const results = await search(COLLECTIONS.CONVERSATIONS, userMessage, workspaceId, 3)
-      if (results.length > 0) {
-        ragContext = '\n\nContexte pertinent trouvé:\n' + results.map((r) => r.content).join('\n---\n')
+    if (messages.length > 6) {
+      try {
+        const results = await search(COLLECTIONS.CONVERSATIONS, userMessage, workspaceId, 3)
+        if (results.length > 0) {
+          ragContext = '\n\nContexte pertinent:\n' + results.map((r: { content: string }) => r.content).join('\n---\n')
+        }
+      } catch (err) {
+        this.logger.warn(`RAG search failed: ${err}`)
       }
-    } catch (err) {
-      this.logger.warn(`Failed to search RAG: ${err}`)
     }
 
-    // 6. Build full prompt
+    // 4. Build prompt
     const axeType = workspace.axeType || (workspace as any).axe_type || 'idea'
     const systemPrompt = SYSTEM_PROMPTS[axeType] || SYSTEM_PROMPTS['idea']
 
@@ -54,31 +44,40 @@ export class ChatService {
       .map((m) => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
       .join('\n')
 
-    const fullPrompt = `${systemPrompt}${ragContext}\n\nHistorique de la conversation:\n${conversationHistory}\n\nUtilisateur: ${userMessage}\n\nAssistant:`
+    const fullPrompt = `${systemPrompt}${ragContext}\n\nHistorique:\n${conversationHistory}\n\nUtilisateur: ${userMessage}\n\nAssistant:`
 
-    // 7. Generate response via LLM
+    // 5. Generate response via LLM
     const llm = getLLMProvider('openai')
     const response = await llm.generate(fullPrompt, {
       temperature: 0.7,
-      maxTokens: 1000,
+      maxTokens: 500,
     })
 
-    // 8. Store assistant response
+    // 6. Store response (blocking) + index both messages in RAG (non-blocking)
     await this.workspaceService.addMessage(workspaceId, 'assistant', response)
 
-    // 9. Index response in RAG
-    try {
-      await indexDocument(
+    // Fire-and-forget RAG indexing
+    this.indexInBackground(workspaceId, userId, userMessage, response)
+
+    return response
+  }
+
+  private indexInBackground(workspaceId: string, userId: string, userMessage: string, response: string) {
+    Promise.all([
+      indexDocument(
+        COLLECTIONS.CONVERSATIONS,
+        { content: userMessage, metadata: { role: 'user' } },
+        workspaceId,
+        userId,
+      ),
+      indexDocument(
         COLLECTIONS.CONVERSATIONS,
         { content: response, metadata: { role: 'assistant' } },
         workspaceId,
         userId,
-      )
-    } catch (err) {
-      this.logger.warn(`Failed to index assistant response in RAG: ${err}`)
-    }
-
-    // 10. Return response
-    return response
+      ),
+    ]).catch((err) => {
+      this.logger.warn(`Background RAG indexing failed: ${err}`)
+    })
   }
 }

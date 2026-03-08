@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Lightbulb, Rocket, Building2, Plus } from 'lucide-react'
 
 interface Workspace {
   id: string
@@ -14,49 +15,50 @@ interface WorkspaceSidebarProps {
   workspaces: Workspace[]
 }
 
-const axeIcons: Record<string, string> = {
-  tresorerie: '💡',
-  growth: '🚀',
-  admin: '🏢',
+const axeIcons: Record<string, typeof Lightbulb> = {
+  idea: Lightbulb,
+  launch: Rocket,
+  existing: Building2,
 }
 
 export function WorkspaceSidebar({ workspaces }: WorkspaceSidebarProps) {
   const pathname = usePathname()
 
   return (
-    <div className="flex h-full w-64 flex-col border-r border-gray-800 bg-gray-950">
-      <div className="border-b border-gray-800 p-4">
-        <h2 className="text-sm font-semibold text-gray-300">Workspaces</h2>
+    <div className="flex h-full w-60 flex-col border-r bg-neutral-50/50">
+      <div className="border-b p-4">
+        <h2 className="text-sm font-medium text-foreground">Workspaces</h2>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
         {workspaces.map((ws) => {
           const isActive = pathname.includes(ws.id)
-          const icon = axeIcons[ws.axe_type] ?? '💡'
+          const Icon = axeIcons[ws.axe_type] ?? Lightbulb
 
           return (
             <Link
               key={ws.id}
               href={`/dashboard/workspace/${ws.id}`}
-              className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                 isActive
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'
+                  ? 'bg-violet-50 text-violet-700 font-medium'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
-              <span>{icon}</span>
+              <Icon className="h-4 w-4 shrink-0" />
               <span className="truncate">{ws.name}</span>
             </Link>
           )
         })}
       </nav>
 
-      <div className="border-t border-gray-800 p-3">
+      <div className="border-t p-3">
         <Link
           href="/dashboard/onboarding"
-          className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-700 px-3 py-2 text-sm text-gray-400 transition-colors hover:border-gray-500 hover:text-gray-200"
+          className="flex items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-violet-300 hover:text-violet-600"
         >
-          + Nouveau workspace
+          <Plus className="h-4 w-4" />
+          Nouveau workspace
         </Link>
       </div>
     </div>

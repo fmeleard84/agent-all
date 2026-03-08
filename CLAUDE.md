@@ -92,3 +92,66 @@ SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx ts-node packages/database/see
 - RLS sur toutes les tables avec company_id
 - Niveaux autonomie : 1 (suggest) → 4 (full auto)
 - Actions critiques toujours soumises a validation humaine
+
+## Design System
+
+Style : **minimal SaaS dashboard** (Linear / Vercel / Stripe)
+
+### Regles strictes
+
+- Interface minimaliste, beaucoup d'espace blanc
+- Layout card-based, max-width 1200px
+- Font : Inter (deja configuree)
+- Couleurs : neutral palette + accent violet-600
+- Composants : shadcn/ui uniquement (Card, Button, Input, Badge, Dialog, Tabs)
+- Icones : Lucide uniquement
+- Pas de gradients lourds, pas d'animations complexes, pas d'emojis dans l'UI
+
+### Palette
+
+```
+background : white / neutral-50
+text : neutral-900
+secondary text : neutral-500 (muted-foreground)
+primary : violet-600
+primary hover : violet-700
+borders : neutral-200
+cards : white, border, rounded-xl, shadow-sm, p-6
+```
+
+### Typographie
+
+```
+Title → text-2xl font-semibold tracking-tight
+Section → text-lg font-medium
+Body → text-sm text-muted-foreground
+```
+
+### Spacing
+
+```
+sections → space-y-8
+cards → space-y-4
+inputs → space-y-2
+```
+
+### Structure de page
+
+```
+Page
+├ Title (text-2xl font-semibold)
+├ Description (text-muted-foreground)
+├ Content cards
+└ Action buttons
+```
+
+### Boutons
+
+```
+primary : bg-violet-600 hover:bg-violet-700 text-white
+secondary : variant outline
+```
+
+### Dark mode
+
+Supporte via class .dark sur html. Utiliser les variables CSS shadcn.

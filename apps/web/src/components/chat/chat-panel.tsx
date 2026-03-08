@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MessageBubble } from './message-bubble'
-import { Paperclip } from 'lucide-react'
+import { Paperclip, Send, Loader2 } from 'lucide-react'
 
 interface Message {
   id?: string
@@ -68,14 +68,14 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
 
       const assistantMessage: Message = {
         role: 'assistant',
-        content: data.response ?? 'Erreur: pas de réponse.',
+        content: data.response ?? 'Erreur: pas de reponse.',
         created_at: new Date().toISOString(),
       }
       setMessages((prev) => [...prev, assistantMessage])
     } catch {
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'Erreur de connexion. Veuillez réessayer.',
+        content: 'Erreur de connexion. Veuillez reessayer.',
         created_at: new Date().toISOString(),
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -95,7 +95,6 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
       return
     }
 
-    // Upload to Supabase Storage
     const path = `workspace-docs/${workspaceId}/${Date.now()}_${file.name}`
     const { error: uploadError } = await supabase.storage
       .from('documents')
@@ -104,20 +103,16 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
     if (uploadError) {
       console.error(uploadError)
       setLoading(false)
-      // Reset file input
       if (fileInputRef.current) fileInputRef.current.value = ''
       return
     }
 
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = ''
-
-    // Notify chat — reset loading so sendMessage can proceed
     setLoading(false)
-    await sendMessage(`J'ai uploadé le fichier : ${file.name}`)
+    await sendMessage(`J'ai uploade le fichier : ${file.name}`)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage(input)
@@ -125,8 +120,9 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-950">
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+    <div className="flex flex-1 flex-col">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map((msg, i) => (
           <MessageBubble
             key={msg.id ?? i}
@@ -137,10 +133,13 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
         ))}
 
         {loading && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl bg-gray-800 px-4 py-2">
-              <p className="text-sm text-gray-400 animate-pulse">
-                L&apos;agent réfléchit...
+          <div className="flex gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </div>
+            <div className="rounded-2xl rounded-bl-sm border bg-card px-4 py-2.5">
+              <p className="text-sm text-muted-foreground animate-pulse">
+                L&apos;agent reflechit...
               </p>
             </div>
           </div>
@@ -149,39 +148,42 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-gray-800 p-4">
-        <div className="flex gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileUpload}
-            className="hidden"
-            accept=".pdf,.csv,.xlsx,.xls,.doc,.docx,.txt,.png,.jpg,.jpeg"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={loading}
-            title="Joindre un fichier"
-            className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200 disabled:opacity-50"
-          >
-            <Paperclip className="h-4 w-4" />
-          </button>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Votre message..."
-            disabled={loading}
-            className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-          />
-          <button
-            onClick={() => sendMessage(input)}
-            disabled={loading || !input.trim()}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600"
-          >
-            Envoyer
-          </button>
+      {/* Input */}
+      <div className="border-t p-4">
+        <div className="mx-auto max-w-3xl">
+          <div className="flex items-end gap-2 rounded-xl border bg-card p-2 shadow-sm focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-300">
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileUpload}
+              className="hidden"
+              accept=".pdf,.csv,.xlsx,.xls,.doc,.docx,.txt,.png,.jpg,.jpeg"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              title="Joindre un fichier"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+            >
+              <Paperclip className="h-4 w-4" />
+            </button>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Votre message..."
+              disabled={loading}
+              rows={1}
+              className="flex-1 resize-none border-0 bg-transparent px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            />
+            <button
+              onClick={() => sendMessage(input)}
+              disabled={loading || !input.trim()}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition-colors hover:bg-violet-700 disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

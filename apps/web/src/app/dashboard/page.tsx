@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { KpiCard } from '@/components/dashboard/kpi-card'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Mail, FileText, Calculator, AlertCircle, ArrowRight } from 'lucide-react'
+import { Mail, FileText, Calculator, AlertCircle, ArrowRight, Lightbulb, Rocket, Building2, Plus, Loader2 } from 'lucide-react'
 
 interface Workspace {
   id: string
@@ -17,10 +17,10 @@ interface Workspace {
   created_at: string
 }
 
-const axeLabels: Record<string, { label: string; icon: string; color: string }> = {
-  idea: { label: 'Idee', icon: '\u{1F4A1}', color: 'border-amber-500/50' },
-  launch: { label: 'Lancement', icon: '\u{1F680}', color: 'border-blue-500/50' },
-  existing: { label: 'Existant', icon: '\u{1F3E2}', color: 'border-emerald-500/50' },
+const axeConfig: Record<string, { label: string; icon: typeof Lightbulb }> = {
+  idea: { label: 'Idee', icon: Lightbulb },
+  launch: { label: 'Lancement', icon: Rocket },
+  existing: { label: 'Existant', icon: Building2 },
 }
 
 export default function DashboardPage() {
@@ -38,9 +38,11 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        setCheckingWorkspaces(false)
+        return
+      }
 
-      // Check for workspaces
       const { data: userWorkspaces } = await supabase
         .from('workspaces')
         .select('id, name, axe_type, status, created_at')
@@ -55,7 +57,6 @@ export default function DashboardPage() {
       setWorkspaces(userWorkspaces)
       setCheckingWorkspaces(false)
 
-      // Get current user's company
       const { data: companyUsers } = await supabase
         .from('company_users')
         .select('company_id')
@@ -66,7 +67,6 @@ export default function DashboardPage() {
       if (!cId) return
       setCompanyId(cId)
 
-      // Fetch stats
       const [emailsRes, docsRes, entriesRes, pendingRes] = await Promise.all([
         supabase.from('emails').select('id', { count: 'exact', head: true }).eq('company_id', cId),
         supabase.from('documents').select('id', { count: 'exact', head: true }).eq('company_id', cId),
@@ -89,7 +89,7 @@ export default function DashboardPage() {
   if (checkingWorkspaces) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-gray-400 animate-pulse">Chargement...</p>
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -98,7 +98,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Vue d ensemble de votre entreprise</p>
+        <p className="text-muted-foreground">Vue d&apos;ensemble de votre entreprise</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -108,49 +108,49 @@ export default function DashboardPage() {
         <KpiCard title="En attente" value={stats.pendingValidations} icon={AlertCircle} color="amber" />
       </div>
 
-      {/* Mes workspaces section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Mes workspaces</CardTitle>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Mes workspaces</h2>
           <Link
             href="/dashboard/onboarding"
-            className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 transition-colors font-medium"
           >
-            + Nouveau workspace
+            <Plus className="h-4 w-4" />
+            Nouveau
           </Link>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {workspaces.map((ws) => {
-              const axe = axeLabels[ws.axe_type] || { label: ws.axe_type, icon: '', color: 'border-gray-500/50' }
-              return (
-                <Link key={ws.id} href={`/dashboard/workspace/${ws.id}`}>
-                  <Card
-                    className={`border ${axe.color} bg-gray-900/50 hover:bg-gray-800/50 transition-all duration-200 hover:scale-[1.02] cursor-pointer`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{axe.icon}</span>
-                            <h3 className="font-medium text-gray-100">
-                              {ws.name || `Workspace ${axe.label}`}
-                            </h3>
-                          </div>
-                          <p className="text-xs text-gray-500">
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {workspaces.map((ws) => {
+            const config = axeConfig[ws.axe_type] || { label: ws.axe_type, icon: Lightbulb }
+            const Icon = config.icon
+            return (
+              <Link key={ws.id} href={`/dashboard/workspace/${ws.id}`}>
+                <Card className="hover:shadow-md hover:border-violet-200 transition-all duration-200 cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium">
+                            {ws.name || `Workspace ${config.label}`}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
                             {new Date(ws.created_at).toLocaleDateString('fr-FR')}
                           </p>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-gray-500" />
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
 
       <Card>
         <CardHeader>

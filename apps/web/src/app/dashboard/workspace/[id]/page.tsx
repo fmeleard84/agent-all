@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { WorkspaceSidebar } from '@/components/chat/workspace-sidebar'
 import { ChatPanel } from '@/components/chat/chat-panel'
 import { ContextPanel } from '@/components/chat/context-panel'
+import { Loader2 } from 'lucide-react'
 
 interface Workspace {
   id: string
@@ -70,22 +71,22 @@ export default function WorkspacePage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-950">
-        <p className="animate-pulse text-gray-400">Chargement...</p>
+      <div className="flex h-[80vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   if (notFound || !workspace) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-950">
-        <p className="text-gray-400">Workspace introuvable.</p>
+      <div className="flex h-[80vh] items-center justify-center">
+        <p className="text-muted-foreground">Workspace introuvable.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex h-screen bg-gray-950">
+    <div className="flex h-[calc(100vh-2rem)] -m-8 border rounded-xl overflow-hidden bg-background">
       <WorkspaceSidebar workspaces={allWorkspaces} />
       <ChatPanel workspaceId={workspace.id} initialMessages={messages} />
       <ContextPanel workspace={workspace} />
