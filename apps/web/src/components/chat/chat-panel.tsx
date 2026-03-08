@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MessageBubble } from './message-bubble'
 import { Paperclip, Send, Loader2 } from 'lucide-react'
@@ -23,6 +23,7 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [streaming, setStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const hasSentGreeting = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -39,6 +40,66 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const getToken = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token
+  }, [])
+
+  async function readStream(response: Response) {
+    const reader = response.body?.getReader()
+    if (!reader) return
+
+    const decoder = new TextDecoder()
+    let assistantContent = ''
+
+    // Add empty assistant message
+    const assistantMessage: Message = {
+      role: 'assistant',
+      content: '',
+      created_at: new Date().toISOString(),
+    }
+    setMessages((prev) => [...prev, assistantMessage])
+    setStreaming(true)
+
+    try {
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6).trim()
+          if (data === '[DONE]') continue
+
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.content) {
+              assistantContent += parsed.content
+              setMessages((prev) => {
+                const updated = [...prev]
+                const last = updated[updated.length - 1]
+                if (last && last.role === 'assistant') {
+                  updated[updated.length - 1] = { ...last, content: assistantContent }
+                }
+                return updated
+              })
+            }
+          } catch {
+            // ignore parse errors
+          }
+        }
+      }
+    } finally {
+      setStreaming(false)
+      setLoading(false)
+    }
+  }
+
   async function sendMessage(text: string) {
     if (!text.trim() || loading) return
 
@@ -52,8 +113,7 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
     setLoading(true)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
+      const token = await getToken()
 
       const res = await fetch(`${API_URL}/chat/${workspaceId}`, {
         method: 'POST',
@@ -64,22 +124,13 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
         body: JSON.stringify({ message: text.trim() }),
       })
 
-      const data = await res.json()
-
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: data.response ?? 'Erreur: pas de reponse.',
-        created_at: new Date().toISOString(),
-      }
-      setMessages((prev) => [...prev, assistantMessage])
+      await readStream(res)
     } catch {
-      const errorMessage: Message = {
+      setMessages((prev) => [...prev, {
         role: 'assistant',
         content: 'Erreur de connexion. Veuillez reessayer.',
         created_at: new Date().toISOString(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
-    } finally {
+      }])
       setLoading(false)
     }
   }
@@ -87,29 +138,41 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-
-    setLoading(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      setLoading(false)
-      return
-    }
-
-    const path = `workspace-docs/${workspaceId}/${Date.now()}_${file.name}`
-    const { error: uploadError } = await supabase.storage
-      .from('documents')
-      .upload(path, file)
-
-    if (uploadError) {
-      console.error(uploadError)
-      setLoading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      return
-    }
-
     if (fileInputRef.current) fileInputRef.current.value = ''
-    setLoading(false)
-    await sendMessage(`J'ai uploade le fichier : ${file.name}`)
+
+    // Show user message with file name
+    const userMessage: Message = {
+      role: 'user',
+      content: `📎 ${file.name}`,
+      created_at: new Date().toISOString(),
+    }
+    setMessages((prev) => [...prev, userMessage])
+    setLoading(true)
+
+    try {
+      const token = await getToken()
+
+      // Upload directly to API which extracts + chats
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch(`${API_URL}/chat/${workspaceId}/upload`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      })
+
+      await readStream(res)
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: 'Erreur lors de l\'upload. Veuillez reessayer.',
+        created_at: new Date().toISOString(),
+      }])
+      setLoading(false)
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -132,9 +195,9 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
           />
         ))}
 
-        {loading && (
+        {loading && !streaming && (
           <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-400">
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
             <div className="rounded-2xl rounded-bl-sm border bg-card px-4 py-2.5">
@@ -151,18 +214,18 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
       {/* Input */}
       <div className="border-t p-4">
         <div className="mx-auto max-w-3xl">
-          <div className="flex items-end gap-2 rounded-xl border bg-card p-2 shadow-sm focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-300">
+          <div className="flex items-end gap-2 rounded-xl border bg-card p-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30">
             <input
               ref={fileInputRef}
               type="file"
               onChange={handleFileUpload}
               className="hidden"
-              accept=".pdf,.csv,.xlsx,.xls,.doc,.docx,.txt,.png,.jpg,.jpeg"
+              accept=".pdf,.csv,.xlsx,.xls,.doc,.docx,.txt,.png,.jpg,.jpeg,.pptx"
             />
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
-              title="Joindre un fichier"
+              title="Joindre un fichier (PDF, CSV, TXT...)"
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
             >
               <Paperclip className="h-4 w-4" />
@@ -179,7 +242,7 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
             <button
               onClick={() => sendMessage(input)}
               disabled={loading || !input.trim()}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition-colors hover:bg-violet-700 disabled:opacity-50"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
             </button>

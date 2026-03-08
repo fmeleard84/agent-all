@@ -13,7 +13,7 @@ export class ChatService {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   }
 
-  async chat(workspaceId: string, userMessage: string, userId: string): Promise<string> {
+  async *chatStream(workspaceId: string, userMessage: string, userId: string): AsyncGenerator<string> {
     // 1. Get workspace + store message + get history in parallel
     const [workspace, , messages] = await Promise.all([
       this.workspaceService.findById(workspaceId),
@@ -38,7 +38,7 @@ export class ChatService {
       }
     }
 
-    // 3. Build proper chat messages (system + history + user)
+    // 3. Build chat messages
     const axeType = workspace.axeType || (workspace as any).axe_type || 'idea'
     const systemPrompt = SYSTEM_PROMPTS[axeType] || SYSTEM_PROMPTS['idea']
 
@@ -46,31 +46,53 @@ export class ChatService {
       { role: 'system', content: systemPrompt + ragContext },
     ]
 
-    // Add conversation history as proper role messages
     for (const m of messages) {
       if (m.role === 'user' || m.role === 'assistant') {
         chatMessages.push({ role: m.role, content: m.content })
       }
     }
 
-    // Add the current message
     chatMessages.push({ role: 'user', content: userMessage })
 
-    // 4. Generate response — gpt-4o-mini for speed
-    const completion = await this.openai.chat.completions.create({
+    // 4. Stream response
+    const stream = await this.openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: chatMessages,
       temperature: 0.8,
       max_tokens: 300,
+      stream: true,
     })
 
-    const response = completion.choices[0]?.message?.content || ''
+    let fullResponse = ''
 
-    // 5. Store response (blocking) + RAG indexing (non-blocking)
-    await this.workspaceService.addMessage(workspaceId, 'assistant', response)
-    this.indexInBackground(workspaceId, userId, userMessage, response)
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content
+      if (content) {
+        fullResponse += content
+        yield content
+      }
+    }
 
-    return response
+    // 5. Store full response + RAG indexing (non-blocking)
+    await this.workspaceService.addMessage(workspaceId, 'assistant', fullResponse)
+    this.indexInBackground(workspaceId, userId, userMessage, fullResponse)
+  }
+
+  async extractDocumentText(fileBuffer: Buffer, fileName: string): Promise<string> {
+    const ext = fileName.toLowerCase().split('.').pop()
+
+    if (ext === 'pdf') {
+      const pdfParse = require('pdf-parse')
+      const data = await pdfParse(fileBuffer)
+      return data.text
+    }
+
+    if (ext === 'txt' || ext === 'csv') {
+      return fileBuffer.toString('utf-8')
+    }
+
+    // For other types, return a note
+    return `[Document ${fileName} uploade - type ${ext} non supporte pour l'extraction automatique]`
   }
 
   private indexInBackground(workspaceId: string, userId: string, userMessage: string, response: string) {
