@@ -4,6 +4,7 @@ import { BullModule } from '@nestjs/bullmq'
 import { AuthModule } from './auth/auth.module'
 import { CompanyModule } from './company/company.module'
 import { OrchestratorModule } from './orchestrator/orchestrator.module'
+import { WorkspaceModule } from './workspace/workspace.module'
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { OrchestratorModule } from './orchestrator/orchestrator.module'
     AuthModule,
     CompanyModule,
     OrchestratorModule,
+    WorkspaceModule,
   ],
 })
 export class AppModule {}
