@@ -11,6 +11,7 @@ COPY packages/agent-sdk/package.json ./packages/agent-sdk/
 COPY packages/agent-registry/package.json ./packages/agent-registry/
 COPY packages/workflow-engine/package.json ./packages/workflow-engine/
 COPY packages/event-bus/package.json ./packages/event-bus/
+COPY packages/rag/package.json ./packages/rag/
 RUN npm install --workspace=@agent-all/api
 
 FROM base AS builder
@@ -23,6 +24,7 @@ RUN npm run build --workspace=packages/agent-sdk
 RUN npm run build --workspace=packages/agent-registry
 RUN npm run build --workspace=packages/workflow-engine
 RUN npm run build --workspace=packages/event-bus
+RUN npm run build --workspace=packages/rag
 RUN npm run build --workspace=@agent-all/api
 
 FROM base AS runner
