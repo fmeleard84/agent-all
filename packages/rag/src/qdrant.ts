@@ -10,11 +10,17 @@ export const COLLECTIONS = {
 let client: QdrantClient | null = null;
 
 /**
- * Return a singleton Qdrant client connected to 127.0.0.1:6333.
+ * Return a singleton Qdrant client.
+ * Uses QDRANT_URL env var if set, otherwise defaults to 127.0.0.1:6333.
  */
 export function getQdrantClient(): QdrantClient {
   if (!client) {
-    client = new QdrantClient({ host: "127.0.0.1", port: 6333 });
+    const qdrantUrl = process.env.QDRANT_URL;
+    if (qdrantUrl) {
+      client = new QdrantClient({ url: qdrantUrl });
+    } else {
+      client = new QdrantClient({ host: "127.0.0.1", port: 6333 });
+    }
   }
   return client;
 }

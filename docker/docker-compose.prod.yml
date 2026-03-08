@@ -16,6 +16,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CORS_ORIGIN=https://agent-all.ialla.fr
+      - QDRANT_URL=http://host.docker.internal:6333
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.agent-all-api.rule=Host(`agent-all.ialla.fr`) && PathPrefix(`/api`)"
@@ -39,6 +42,9 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - QDRANT_URL=http://host.docker.internal:6333
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - internal
     depends_on:
