@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MessageBubble } from './message-bubble'
+import { Paperclip } from 'lucide-react'
 
 interface Message {
   id?: string
@@ -24,6 +25,7 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const hasSentGreeting = useRef(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -82,6 +84,39 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
     }
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setLoading(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setLoading(false)
+      return
+    }
+
+    // Upload to Supabase Storage
+    const path = `workspace-docs/${workspaceId}/${Date.now()}_${file.name}`
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(path, file)
+
+    if (uploadError) {
+      console.error(uploadError)
+      setLoading(false)
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = ''
+
+    // Notify chat — reset loading so sendMessage can proceed
+    setLoading(false)
+    await sendMessage(`J'ai uploadé le fichier : ${file.name}`)
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -116,6 +151,21 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
 
       <div className="border-t border-gray-800 p-4">
         <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileUpload}
+            className="hidden"
+            accept=".pdf,.csv,.xlsx,.xls,.doc,.docx,.txt,.png,.jpg,.jpeg"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            title="Joindre un fichier"
+            className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200 disabled:opacity-50"
+          >
+            <Paperclip className="h-4 w-4" />
+          </button>
           <input
             type="text"
             value={input}
