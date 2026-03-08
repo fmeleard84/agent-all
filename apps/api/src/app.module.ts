@@ -6,6 +6,7 @@ import { CompanyModule } from './company/company.module'
 import { OrchestratorModule } from './orchestrator/orchestrator.module'
 import { WorkspaceModule } from './workspace/workspace.module'
 import { ChatModule } from './chat/chat.module'
+import { QontoModule } from './qonto/qonto.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ChatModule } from './chat/chat.module'
     OrchestratorModule,
     WorkspaceModule,
     ChatModule,
+    QontoModule,
   ],
 })
 export class AppModule {}
