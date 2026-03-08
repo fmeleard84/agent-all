@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module'
 import { CompanyModule } from './company/company.module'
 import { OrchestratorModule } from './orchestrator/orchestrator.module'
 import { WorkspaceModule } from './workspace/workspace.module'
+import { ChatModule } from './chat/chat.module'
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { WorkspaceModule } from './workspace/workspace.module'
     CompanyModule,
     OrchestratorModule,
     WorkspaceModule,
+    ChatModule,
   ],
 })
 export class AppModule {}
