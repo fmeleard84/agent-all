@@ -4,6 +4,10 @@ export type EventType =
   | 'INVOICE_CREATED'
   | 'PAYMENT_RECEIVED'
   | 'MANUAL_TRIGGER'
+  | 'WORKSPACE_CREATED'
+  | 'CHAT_MESSAGE_SENT'
+  | 'DOCUMENT_UPLOADED_WORKSPACE'
+  | 'QONTO_SYNC_REQUESTED'
 
 export interface AgentEvent {
   id: string
