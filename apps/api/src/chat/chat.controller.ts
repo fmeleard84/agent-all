@@ -1,5 +1,4 @@
-import { Controller, Post, Param, Body, UseGuards, Req, Res, UploadedFile, UseInterceptors } from '@nestjs/common'
-import { FileInterceptor } from '@nestjs/platform-express'
+import { Controller, Post, Param, Body, UseGuards, Req, Res } from '@nestjs/common'
 import { ChatService } from './chat.service'
 import { SupabaseAuthGuard } from '../auth/auth.guard'
 import type { FastifyReply } from 'fastify'
