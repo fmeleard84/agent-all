@@ -1,0 +1,27 @@
+{
+  "name": "@agent-all/workers",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node --transpile-only src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "bullmq": "^5.25.0",
+    "ioredis": "^5.4.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@agent-all/types": "*",
+    "@agent-all/database": "*",
+    "@agent-all/llm": "*",
+    "@agent-all/agent-sdk": "*",
+    "@agent-all/agent-registry": "*",
+    "@agent-all/workflow-engine": "*",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0"
+  }
+}
