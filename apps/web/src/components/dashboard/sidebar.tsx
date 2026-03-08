@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import {
   LayoutDashboard,
   Activity,
@@ -12,6 +13,8 @@ import {
   CheckSquare,
   Settings,
   LogOut,
+  Moon,
+  Sun,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -30,14 +33,19 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
 
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
+  function toggleTheme() {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
+
   return (
-    <aside className="w-60 min-h-screen border-r bg-neutral-50/50 flex flex-col">
+    <aside className="w-60 min-h-screen border-r bg-card flex flex-col">
       <div className="p-6 border-b">
         <h1 className="text-lg font-semibold tracking-tight">Agent All</h1>
         <p className="text-xs text-muted-foreground mt-0.5">AI Operating System</p>
@@ -54,7 +62,7 @@ export function Sidebar() {
               href={item.href}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                 isActive
-                  ? 'bg-violet-50 text-violet-700 font-medium'
+                  ? 'bg-primary/10 text-primary font-medium'
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground'
               }`}
             >
@@ -65,7 +73,16 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-3 border-t">
+      <div className="p-3 border-t space-y-0.5">
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground w-full transition-colors"
+        >
+          <Sun className="w-4 h-4 dark:hidden" />
+          <Moon className="w-4 h-4 hidden dark:block" />
+          <span className="dark:hidden">Mode sombre</span>
+          <span className="hidden dark:block">Mode clair</span>
+        </button>
         <button
           onClick={handleLogout}
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground w-full transition-colors"
