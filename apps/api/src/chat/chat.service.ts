@@ -1,62 +1,73 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { WorkspaceService } from '../workspace/workspace.service'
-import { getLLMProvider } from '@agent-all/llm'
 import { indexDocument, search, COLLECTIONS } from '@agent-all/rag'
 import { SYSTEM_PROMPTS } from './prompts'
+import OpenAI from 'openai'
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name)
+  private openai: OpenAI
 
-  constructor(private readonly workspaceService: WorkspaceService) {}
+  constructor(private readonly workspaceService: WorkspaceService) {
+    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  }
 
   async chat(workspaceId: string, userMessage: string, userId: string): Promise<string> {
-    // 1. Get workspace
-    const workspace = await this.workspaceService.findById(workspaceId)
-    if (!workspace) {
-      throw new Error(`Workspace ${workspaceId} not found`)
-    }
-
-    // 2. Store user message + get history in parallel
-    const [, messages] = await Promise.all([
+    // 1. Get workspace + store message + get history in parallel
+    const [workspace, , messages] = await Promise.all([
+      this.workspaceService.findById(workspaceId),
       this.workspaceService.addMessage(workspaceId, 'user', userMessage),
       this.workspaceService.getMessages(workspaceId, 20),
     ])
 
-    // 3. Search RAG only if enough conversation history (skip for first few messages)
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`)
+    }
+
+    // 2. Search RAG only if enough history
     let ragContext = ''
-    if (messages.length > 6) {
+    if (messages.length > 8) {
       try {
         const results = await search(COLLECTIONS.CONVERSATIONS, userMessage, workspaceId, 3)
         if (results.length > 0) {
-          ragContext = '\n\nContexte pertinent:\n' + results.map((r: { content: string }) => r.content).join('\n---\n')
+          ragContext = '\n\nContexte des echanges precedents:\n' + results.map((r: { content: string }) => r.content).join('\n---\n')
         }
       } catch (err) {
         this.logger.warn(`RAG search failed: ${err}`)
       }
     }
 
-    // 4. Build prompt
+    // 3. Build proper chat messages (system + history + user)
     const axeType = workspace.axeType || (workspace as any).axe_type || 'idea'
     const systemPrompt = SYSTEM_PROMPTS[axeType] || SYSTEM_PROMPTS['idea']
 
-    const conversationHistory = messages
-      .map((m) => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
-      .join('\n')
+    const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt + ragContext },
+    ]
 
-    const fullPrompt = `${systemPrompt}${ragContext}\n\nHistorique:\n${conversationHistory}\n\nUtilisateur: ${userMessage}\n\nAssistant:`
+    // Add conversation history as proper role messages
+    for (const m of messages) {
+      if (m.role === 'user' || m.role === 'assistant') {
+        chatMessages.push({ role: m.role, content: m.content })
+      }
+    }
 
-    // 5. Generate response via LLM
-    const llm = getLLMProvider('openai')
-    const response = await llm.generate(fullPrompt, {
-      temperature: 0.7,
-      maxTokens: 500,
+    // Add the current message
+    chatMessages.push({ role: 'user', content: userMessage })
+
+    // 4. Generate response — gpt-4o-mini for speed
+    const completion = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: chatMessages,
+      temperature: 0.8,
+      max_tokens: 300,
     })
 
-    // 6. Store response (blocking) + index both messages in RAG (non-blocking)
-    await this.workspaceService.addMessage(workspaceId, 'assistant', response)
+    const response = completion.choices[0]?.message?.content || ''
 
-    // Fire-and-forget RAG indexing
+    // 5. Store response (blocking) + RAG indexing (non-blocking)
+    await this.workspaceService.addMessage(workspaceId, 'assistant', response)
     this.indexInBackground(workspaceId, userId, userMessage, response)
 
     return response
