@@ -1,13 +1,30 @@
 const PDF_STYLES = `
-  .pdf-export {
-    --foreground: 0 0% 5%;
-    --muted-foreground: 0 0% 40%;
-    --card: 0 0% 100%;
-    --background: 0 0% 100%;
-    --muted: 0 0% 95%;
-    --border: 0 0% 85%;
-    --accent: 0 0% 95%;
+  /* Force all text to near-black */
+  .pdf-export,
+  .pdf-export p,
+  .pdf-export span,
+  .pdf-export h1,
+  .pdf-export h2,
+  .pdf-export h3,
+  .pdf-export h4,
+  .pdf-export li,
+  .pdf-export div,
+  .pdf-export code,
+  .pdf-export a {
+    color: #1a1a1a !important;
   }
+
+  /* Muted text: readable dark gray */
+  .pdf-export .text-muted-foreground {
+    color: #666666 !important;
+  }
+
+  /* Sub-muted captions: medium gray */
+  .pdf-export .italic {
+    color: #888888 !important;
+  }
+
+  /* White backgrounds — remove all colored bgs */
   .pdf-export [class*="bg-emerald"],
   .pdf-export [class*="bg-red"],
   .pdf-export [class*="bg-violet"],
@@ -15,19 +32,12 @@ const PDF_STYLES = `
   .pdf-export [class*="bg-blue"],
   .pdf-export [class*="bg-orange"],
   .pdf-export [class*="bg-purple"],
-  .pdf-export [class*="bg-pink"] {
+  .pdf-export [class*="bg-pink"],
+  .pdf-export [class*="bg-muted"] {
     background-color: #ffffff !important;
   }
-  .pdf-export [class*="text-emerald"]:not(svg),
-  .pdf-export [class*="text-red"]:not(svg),
-  .pdf-export [class*="text-violet"]:not(svg),
-  .pdf-export [class*="text-amber"]:not(svg),
-  .pdf-export [class*="text-blue"]:not(svg),
-  .pdf-export [class*="text-orange"]:not(svg),
-  .pdf-export [class*="text-purple"]:not(svg),
-  .pdf-export [class*="text-pink"]:not(svg) {
-    color: #1a1a1a !important;
-  }
+
+  /* Neutral borders */
   .pdf-export [class*="border-emerald"],
   .pdf-export [class*="border-red"],
   .pdf-export [class*="border-violet"],
@@ -38,6 +48,26 @@ const PDF_STYLES = `
   .pdf-export [class*="border-pink"] {
     border-color: #e0e0e0 !important;
   }
+
+  /* Card background forced white */
+  .pdf-export .bg-card,
+  .pdf-export [class*="bg-card"] {
+    background-color: #ffffff !important;
+  }
+
+  /* Keep icon SVG colors */
+  .pdf-export svg[class*="text-red"] { color: #dc2626 !important; }
+  .pdf-export svg[class*="text-emerald"] { color: #059669 !important; }
+  .pdf-export svg[class*="text-violet"] { color: #7c3aed !important; }
+  .pdf-export svg[class*="text-amber"] { color: #d97706 !important; }
+  .pdf-export svg[class*="text-blue"] { color: #2563eb !important; }
+  .pdf-export svg[class*="text-orange"] { color: #ea580c !important; }
+  .pdf-export svg[class*="text-purple"] { color: #9333ea !important; }
+  .pdf-export svg[class*="text-pink"] { color: #db2777 !important; }
+
+  /* Progress bars keep color */
+  .pdf-export .bg-violet-500 { background-color: #7c3aed !important; }
+  .pdf-export [class*="from-violet"] { background-color: #7c3aed !important; }
 `
 
 export async function exportDashboardPdf(element: HTMLElement, filename: string) {
