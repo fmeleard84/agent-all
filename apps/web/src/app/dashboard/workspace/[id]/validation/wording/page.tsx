@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { exportDashboardPdf } from '@/lib/export-pdf'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -87,18 +88,8 @@ export default function WordingDashboard() {
   }, [params.id])
 
   async function handleExportPdf() {
-    const html2pdf = (await import('html2pdf.js')).default
     if (!dashboardRef.current) return
-    html2pdf()
-      .set({
-        margin: [10, 10],
-        filename: `wording-posture-${workspaceName}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      })
-      .from(dashboardRef.current)
-      .save()
+    await exportDashboardPdf(dashboardRef.current, `wording-posture-${workspaceName}.pdf`)
   }
 
   if (loading) {
