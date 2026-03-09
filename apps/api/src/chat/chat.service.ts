@@ -289,7 +289,9 @@ Le JSON doit suivre EXACTEMENT cette structure :
     "benefits": { "enabled": true, "title": "...", "items": [{ "icon": "zap|shield|clock|star|target|heart|rocket|check|trending-up|users", "title": "...", "description": "..." }] },
     "testimonial": { "enabled": true, "quote": "...", "author": "...", "role": "...", "company": "..." },
     "cta": { "enabled": true, "title": "...", "subtitle": "...", "ctaText": "..." },
-    "emailCapture": { "enabled": true, "title": "...", "subtitle": "...", "placeholder": "...", "buttonText": "...", "reassurance": "..." }
+    "emailCapture": { "enabled": true, "title": "...", "subtitle": "...", "placeholder": "...", "buttonText": "...", "reassurance": "..." },
+    "contactForm": { "enabled": true, "title": "...", "subtitle": "...", "fields": [{ "name": "lastName", "label": "Nom", "type": "text", "required": true }, { "name": "firstName", "label": "Prenom", "type": "text", "required": true }, { "name": "email", "label": "Email", "type": "email", "required": true }, { "name": "phone", "label": "Telephone", "type": "tel", "required": false }, { "name": "message", "label": "Message", "type": "textarea", "required": true }], "buttonText": "...", "successMessage": "..." },
+    "social": { "enabled": true, "title": "Retrouvez-nous", "links": [{ "platform": "linkedin", "url": "" }, { "platform": "instagram", "url": "" }] }
   },
   "branding": {
     "primaryColor": "${brandPrimary}",

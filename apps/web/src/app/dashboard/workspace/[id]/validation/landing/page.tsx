@@ -32,6 +32,9 @@ import {
   Check,
   TrendingUp,
   Users,
+  Send,
+  Link2,
+  Copy as CopyIcon,
 } from 'lucide-react'
 
 interface LandingSection {
@@ -84,6 +87,19 @@ interface EmailCaptureSection extends LandingSection {
   reassurance: string
 }
 
+interface ContactFormSection extends LandingSection {
+  title: string
+  subtitle: string
+  fields: { name: string; label: string; type: string; required: boolean }[]
+  buttonText: string
+  successMessage: string
+}
+
+interface SocialSection extends LandingSection {
+  title: string
+  links: { platform: string; url: string }[]
+}
+
 interface LandingData {
   sections: {
     hero: HeroSection
@@ -93,6 +109,8 @@ interface LandingData {
     testimonial: TestimonialSection
     cta: CtaSection
     emailCapture: EmailCaptureSection
+    contactForm: ContactFormSection
+    social: SocialSection
   }
   branding: {
     primaryColor: string
@@ -101,6 +119,8 @@ interface LandingData {
     headingFont: string
     bodyFont: string
   }
+  slug?: string
+  published?: boolean
 }
 
 const SECTION_LABELS: Record<string, string> = {
@@ -111,6 +131,8 @@ const SECTION_LABELS: Record<string, string> = {
   testimonial: 'Temoignage',
   cta: 'Appel a l\'action',
   emailCapture: 'Capture email',
+  contactForm: 'Formulaire de contact',
+  social: 'Reseaux sociaux',
 }
 
 const ICON_MAP: Record<string, typeof Zap> = {
@@ -118,6 +140,19 @@ const ICON_MAP: Record<string, typeof Zap> = {
   heart: Heart, rocket: Rocket, check: Check, 'trending-up': TrendingUp, users: Users,
 }
 const ICON_OPTIONS = Object.keys(ICON_MAP)
+
+const SOCIAL_PLATFORMS = ['facebook', 'instagram', 'linkedin', 'twitter', 'tiktok', 'youtube']
+
+const FIELD_TYPES = ['text', 'email', 'tel', 'textarea']
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
 
 function SectionToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void; label?: string }) {
   return (
@@ -192,6 +227,7 @@ export default function LandingEditor() {
     useEditableAction<LandingData>(params.id, 'landing')
   const dashboardRef = useRef<HTMLDivElement>(null)
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null)
+  const [copiedUrl, setCopiedUrl] = useState(false)
 
   async function handleImageUpload(slot: string, path: string, file: File) {
     setUploadingSlot(slot)
@@ -231,6 +267,28 @@ export default function LandingEditor() {
         },
       }))
     }
+  }
+
+  function handlePublish() {
+    if (!data) return
+    const defaultSlug = slugify(workspaceName || 'landing')
+    const slug = window.prompt('Choisissez un slug pour votre landing page :', data.slug || defaultSlug)
+    if (!slug) return
+    const cleanSlug = slugify(slug)
+    updateField('slug', cleanSlug)
+    updateField('published', true)
+  }
+
+  function handleUnpublish() {
+    updateField('published', false)
+  }
+
+  function handleCopyUrl() {
+    if (!data?.slug) return
+    const url = `https://agent-all.ialla.fr/lp/${data.slug}`
+    navigator.clipboard.writeText(url)
+    setCopiedUrl(true)
+    setTimeout(() => setCopiedUrl(false), 2000)
   }
 
   if (loading) {
@@ -273,6 +331,45 @@ export default function LandingEditor() {
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Save className="h-3 w-3 animate-pulse" /> Sauvegarde...
             </span>
+          )}
+          {data.published && data.slug ? (
+            <>
+              <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-2">
+                <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                <a
+                  href={`https://agent-all.ialla.fr/lp/${data.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
+                >
+                  agent-all.ialla.fr/lp/{data.slug}
+                </a>
+                <button
+                  onClick={handleCopyUrl}
+                  className="ml-1 p-0.5 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                  title="Copier l'URL"
+                >
+                  {copiedUrl ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  ) : (
+                    <CopyIcon className="h-3.5 w-3.5 text-emerald-600" />
+                  )}
+                </button>
+              </div>
+              <button
+                onClick={handleUnpublish}
+                className="inline-flex items-center gap-2 rounded-lg border border-red-200 dark:border-red-800 px-4 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <EyeOff className="h-4 w-4" /> Depublier
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handlePublish}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white transition-colors"
+            >
+              <Globe className="h-4 w-4" /> Publier
+            </button>
           )}
           <button
             onClick={importBranding}
@@ -540,6 +637,139 @@ export default function LandingEditor() {
           </div>
           <EditableText value={sections.emailCapture.reassurance} onChange={v => updateField('sections.emailCapture.reassurance', v)} as="p" className="text-xs text-muted-foreground mt-2 italic" />
         </SectionCard>
+
+        {/* Contact Form */}
+        {sections.contactForm && (
+          <SectionCard
+            title="Formulaire de contact"
+            enabled={sections.contactForm.enabled}
+            onToggle={() => updateField('sections.contactForm.enabled', !sections.contactForm.enabled)}
+          >
+            <EditableText value={sections.contactForm.title} onChange={v => updateField('sections.contactForm.title', v)} as="h3" className="text-lg font-semibold" />
+            <EditableText value={sections.contactForm.subtitle} onChange={v => updateField('sections.contactForm.subtitle', v)} as="p" className="text-sm text-muted-foreground mt-2" />
+            <div className="mt-4 space-y-3">
+              {sections.contactForm.fields.map((field, i) => (
+                <div key={i} className="group/field flex items-center gap-3 rounded-lg bg-muted/30 p-3">
+                  <div className="flex-1 flex items-center gap-3">
+                    <EditableText value={field.label} onChange={v => {
+                      setFieldDirectly(prev => {
+                        const fields = [...prev.sections.contactForm.fields]
+                        fields[i] = { ...fields[i], label: v }
+                        return { ...prev, sections: { ...prev.sections, contactForm: { ...prev.sections.contactForm, fields } } }
+                      })
+                    }} as="span" className="text-sm font-medium min-w-[100px]" />
+                    <select
+                      value={field.type}
+                      onChange={e => {
+                        setFieldDirectly(prev => {
+                          const fields = [...prev.sections.contactForm.fields]
+                          fields[i] = { ...fields[i], type: e.target.value }
+                          return { ...prev, sections: { ...prev.sections, contactForm: { ...prev.sections.contactForm, fields } } }
+                        })
+                      }}
+                      className="rounded-md border bg-background px-2 py-1 text-xs"
+                    >
+                      {FIELD_TYPES.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        setFieldDirectly(prev => {
+                          const fields = [...prev.sections.contactForm.fields]
+                          fields[i] = { ...fields[i], required: !fields[i].required }
+                          return { ...prev, sections: { ...prev.sections, contactForm: { ...prev.sections.contactForm, fields } } }
+                        })
+                      }}
+                      className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${field.required ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      {field.required ? 'Requis' : 'Optionnel'}
+                    </button>
+                  </div>
+                  <button onClick={() => {
+                    setFieldDirectly(prev => ({
+                      ...prev,
+                      sections: { ...prev.sections, contactForm: { ...prev.sections.contactForm, fields: prev.sections.contactForm.fields.filter((_, j) => j !== i) } }
+                    }))
+                  }} className="opacity-0 group-hover/field:opacity-60 hover:!opacity-100 text-red-500 p-1">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => {
+                setFieldDirectly(prev => ({
+                  ...prev,
+                  sections: { ...prev.sections, contactForm: { ...prev.sections.contactForm, fields: [...prev.sections.contactForm.fields, { name: 'new_field', label: 'Nouveau champ', type: 'text', required: false }] } }
+                }))
+              }} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                <Plus className="h-3 w-3" /> Ajouter un champ
+              </button>
+            </div>
+            <div className="mt-4 flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Send className="h-4 w-4 text-muted-foreground" />
+                <EditableText value={sections.contactForm.buttonText} onChange={v => updateField('sections.contactForm.buttonText', v)} as="span" className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white" />
+              </div>
+            </div>
+            <EditableText value={sections.contactForm.successMessage} onChange={v => updateField('sections.contactForm.successMessage', v)} as="p" className="text-xs text-muted-foreground mt-3 italic" />
+          </SectionCard>
+        )}
+
+        {/* Social */}
+        {sections.social && (
+          <SectionCard
+            title="Reseaux sociaux"
+            enabled={sections.social.enabled}
+            onToggle={() => updateField('sections.social.enabled', !sections.social.enabled)}
+          >
+            <EditableText value={sections.social.title} onChange={v => updateField('sections.social.title', v)} as="h3" className="text-lg font-semibold" />
+            <div className="mt-4 space-y-3">
+              {sections.social.links.map((link, i) => (
+                <div key={i} className="group/link flex items-center gap-3 rounded-lg bg-muted/30 p-3">
+                  <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <select
+                    value={link.platform}
+                    onChange={e => {
+                      setFieldDirectly(prev => {
+                        const links = [...prev.sections.social.links]
+                        links[i] = { ...links[i], platform: e.target.value }
+                        return { ...prev, sections: { ...prev.sections, social: { ...prev.sections.social, links } } }
+                      })
+                    }}
+                    className="rounded-md border bg-background px-2 py-1 text-xs capitalize"
+                  >
+                    {SOCIAL_PLATFORMS.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                  <EditableText value={link.url} onChange={v => {
+                    setFieldDirectly(prev => {
+                      const links = [...prev.sections.social.links]
+                      links[i] = { ...links[i], url: v }
+                      return { ...prev, sections: { ...prev.sections, social: { ...prev.sections.social, links } } }
+                    })
+                  }} as="span" className="flex-1 text-sm text-muted-foreground" />
+                  <button onClick={() => {
+                    setFieldDirectly(prev => ({
+                      ...prev,
+                      sections: { ...prev.sections, social: { ...prev.sections.social, links: prev.sections.social.links.filter((_, j) => j !== i) } }
+                    }))
+                  }} className="opacity-0 group-hover/link:opacity-60 hover:!opacity-100 text-red-500 p-1">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => {
+                setFieldDirectly(prev => ({
+                  ...prev,
+                  sections: { ...prev.sections, social: { ...prev.sections.social, links: [...prev.sections.social.links, { platform: 'linkedin', url: 'https://' }] } }
+                }))
+              }} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                <Plus className="h-3 w-3" /> Ajouter un reseau
+              </button>
+            </div>
+          </SectionCard>
+        )}
       </div>
     </div>
   )

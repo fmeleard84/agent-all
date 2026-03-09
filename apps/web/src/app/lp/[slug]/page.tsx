@@ -4,18 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  Zap,
-  Shield,
-  Clock,
-  Star,
-  Target,
-  Heart,
-  Rocket,
-  Check,
-  TrendingUp,
-  Users,
-  Loader2,
-  Quote,
+  Zap, Shield, Clock, Star, Target, Heart, Rocket, Check, TrendingUp, Users,
+  Loader2, Quote,
 } from 'lucide-react'
 
 interface LandingData {
@@ -37,8 +27,6 @@ interface LandingData {
     headingFont: string
     bodyFont: string
   }
-  slug?: string
-  published?: boolean
 }
 
 const ICONS: Record<string, typeof Zap> = {
@@ -46,37 +34,38 @@ const ICONS: Record<string, typeof Zap> = {
   heart: Heart, rocket: Rocket, check: Check, 'trending-up': TrendingUp, users: Users,
 }
 
-export default function LandingPreview() {
-  const params = useParams<{ id: string }>()
+const SOCIAL_LABELS: Record<string, string> = {
+  facebook: 'F', instagram: 'I', linkedin: 'in', twitter: 'X', tiktok: 'T', youtube: 'Y',
+}
+
+export default function PublicLandingPage() {
+  const params = useParams<{ slug: string }>()
   const [data, setData] = useState<LandingData | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // Hide dashboard layout (sidebar + main padding) for full-screen preview
-  useEffect(() => {
-    const sidebar = document.querySelector('[data-sidebar]') as HTMLElement
-    const main = document.querySelector('main') as HTMLElement
-    if (sidebar) sidebar.style.display = 'none'
-    if (main) { main.style.padding = '0'; main.style.margin = '0' }
-    return () => {
-      if (sidebar) sidebar.style.display = ''
-      if (main) { main.style.padding = ''; main.style.margin = '' }
-    }
-  }, [])
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
     async function load() {
-      const { data: ws } = await supabase
+      // Find workspace by slug in metadata
+      const { data: workspaces } = await supabase
         .from('workspaces')
         .select('metadata')
-        .eq('id', params.id)
-        .single()
 
-      const structured = (ws?.metadata as any)?.actions?.landing?.structured
-      if (structured) setData(structured as LandingData)
+      if (workspaces) {
+        for (const ws of workspaces) {
+          const landing = (ws.metadata as any)?.actions?.landing?.structured
+          if (landing?.slug === params.slug && landing?.published) {
+            setData(landing as LandingData)
+            setLoading(false)
+            return
+          }
+        }
+      }
+      setNotFound(true)
       setLoading(false)
     }
     load()
-  }, [params.id])
+  }, [params.slug])
 
   if (loading) {
     return (
@@ -86,10 +75,11 @@ export default function LandingPreview() {
     )
   }
 
-  if (!data) {
+  if (notFound || !data) {
     return (
-      <div className="flex h-screen items-center justify-center bg-white">
-        <p className="text-gray-500">Aucune landing page configuree.</p>
+      <div className="flex h-screen flex-col items-center justify-center bg-white gap-3">
+        <p className="text-2xl font-bold text-gray-800">Page introuvable</p>
+        <p className="text-gray-500">Cette page n&apos;existe pas ou n&apos;est pas publiee.</p>
       </div>
     )
   }
@@ -98,9 +88,11 @@ export default function LandingPreview() {
   const primary = b.primaryColor || '#7c3aed'
   const secondary = b.secondaryColor || '#a78bfa'
   const accent = b.accentColor || secondary
+  const hFont = `${b.headingFont || 'Inter'}, system-ui, sans-serif`
+  const bFont = `${b.bodyFont || 'Inter'}, system-ui, sans-serif`
 
   return (
-    <div style={{ fontFamily: `${b.bodyFont || 'Inter'}, system-ui, sans-serif` }} className="bg-white text-gray-900 min-h-screen">
+    <div style={{ fontFamily: bFont }} className="bg-white text-gray-900 min-h-screen">
       {/* Hero */}
       {s.hero.enabled && (
         <section
@@ -113,20 +105,13 @@ export default function LandingPreview() {
           }}
         >
           <div className="max-w-3xl mx-auto">
-            <h1
-              className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight"
-              style={{ fontFamily: `${b.headingFont || 'Inter'}, system-ui, sans-serif` }}
-            >
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight" style={{ fontFamily: hFont }}>
               {s.hero.headline}
             </h1>
             <p className={`mt-6 text-lg md:text-xl ${s.hero.imageUrl ? 'text-white/80' : 'text-gray-600'} max-w-2xl mx-auto`}>
               {s.hero.subheadline}
             </p>
-            <a
-              href="#email-capture"
-              className="mt-8 inline-block rounded-xl px-8 py-4 text-lg font-semibold text-white shadow-lg transition-transform hover:scale-105"
-              style={{ backgroundColor: primary }}
-            >
+            <a href="#email-capture" className="mt-8 inline-block rounded-xl px-8 py-4 text-lg font-semibold text-white shadow-lg transition-transform hover:scale-105" style={{ backgroundColor: primary }}>
               {s.hero.ctaText}
             </a>
           </div>
@@ -137,12 +122,7 @@ export default function LandingPreview() {
       {s.problem.enabled && (
         <section className="px-6 py-20 bg-gray-50">
           <div className="max-w-3xl mx-auto text-center">
-            <h2
-              className="text-3xl font-bold tracking-tight"
-              style={{ fontFamily: `${b.headingFont || 'Inter'}, system-ui, sans-serif` }}
-            >
-              {s.problem.title}
-            </h2>
+            <h2 className="text-3xl font-bold tracking-tight" style={{ fontFamily: hFont }}>{s.problem.title}</h2>
             <div className="mt-8 space-y-4">
               {s.problem.painPoints.map((point, i) => (
                 <p key={i} className="text-gray-600 text-lg leading-relaxed">{point}</p>
@@ -157,12 +137,7 @@ export default function LandingPreview() {
         <section className="px-6 py-20">
           <div className="max-w-5xl mx-auto">
             <div className="text-center">
-              <h2
-                className="text-3xl font-bold tracking-tight"
-                style={{ fontFamily: `${b.headingFont || 'Inter'}, system-ui, sans-serif` }}
-              >
-                {s.solution.title}
-              </h2>
+              <h2 className="text-3xl font-bold tracking-tight" style={{ fontFamily: hFont }}>{s.solution.title}</h2>
               <p className="mt-4 text-gray-600 text-lg max-w-2xl mx-auto">{s.solution.description}</p>
             </div>
             {s.solution.imageUrl && (
@@ -189,12 +164,7 @@ export default function LandingPreview() {
       {s.benefits.enabled && (
         <section className="px-6 py-20 bg-gray-50">
           <div className="max-w-5xl mx-auto text-center">
-            <h2
-              className="text-3xl font-bold tracking-tight"
-              style={{ fontFamily: `${b.headingFont || 'Inter'}, system-ui, sans-serif` }}
-            >
-              {s.benefits.title}
-            </h2>
+            <h2 className="text-3xl font-bold tracking-tight" style={{ fontFamily: hFont }}>{s.benefits.title}</h2>
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
               {s.benefits.items.map((item, i) => {
                 const Icon = ICONS[item.icon] || Star
@@ -244,11 +214,7 @@ export default function LandingPreview() {
           <div className="max-w-3xl mx-auto text-center text-white">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">{s.cta.title}</h2>
             <p className="mt-4 text-lg text-white/80">{s.cta.subtitle}</p>
-            <a
-              href="#email-capture"
-              className="mt-8 inline-block rounded-xl bg-white px-8 py-4 text-lg font-semibold shadow-lg transition-transform hover:scale-105"
-              style={{ color: primary }}
-            >
+            <a href="#email-capture" className="mt-8 inline-block rounded-xl bg-white px-8 py-4 text-lg font-semibold shadow-lg transition-transform hover:scale-105" style={{ color: primary }}>
               {s.cta.ctaText}
             </a>
           </div>
@@ -259,31 +225,13 @@ export default function LandingPreview() {
       {s.emailCapture.enabled && (
         <section id="email-capture" className="px-6 py-20 bg-gray-50">
           <div className="max-w-xl mx-auto text-center">
-            <h2
-              className="text-3xl font-bold tracking-tight"
-              style={{ fontFamily: `${b.headingFont || 'Inter'}, system-ui, sans-serif` }}
-            >
-              {s.emailCapture.title}
-            </h2>
+            <h2 className="text-3xl font-bold tracking-tight" style={{ fontFamily: hFont }}>{s.emailCapture.title}</h2>
             <p className="mt-4 text-gray-600">{s.emailCapture.subtitle}</p>
-            <form
-              action="https://formspree.io/f/placeholder"
-              method="POST"
-              className="mt-8 flex gap-3"
-            >
-              <input
-                type="email"
-                name="email"
-                required
-                placeholder={s.emailCapture.placeholder}
+            <form action="https://formspree.io/f/placeholder" method="POST" className="mt-8 flex gap-3">
+              <input type="email" name="email" required placeholder={s.emailCapture.placeholder}
                 className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2"
-                style={{ '--tw-ring-color': primary } as React.CSSProperties}
-              />
-              <button
-                type="submit"
-                className="rounded-xl px-6 py-3 text-sm font-semibold text-white transition-transform hover:scale-105"
-                style={{ backgroundColor: primary }}
-              >
+                style={{ '--tw-ring-color': primary } as React.CSSProperties} />
+              <button type="submit" className="rounded-xl px-6 py-3 text-sm font-semibold text-white transition-transform hover:scale-105" style={{ backgroundColor: primary }}>
                 {s.emailCapture.buttonText}
               </button>
             </form>
@@ -296,47 +244,26 @@ export default function LandingPreview() {
       {s.contactForm?.enabled && (
         <section className="px-6 py-20">
           <div className="max-w-xl mx-auto">
-            <h2
-              className="text-3xl font-bold tracking-tight text-center"
-              style={{ fontFamily: `${b.headingFont || 'Inter'}, system-ui, sans-serif` }}
-            >
-              {s.contactForm.title}
-            </h2>
+            <h2 className="text-3xl font-bold tracking-tight text-center" style={{ fontFamily: hFont }}>{s.contactForm.title}</h2>
             <p className="mt-4 text-gray-600 text-center">{s.contactForm.subtitle}</p>
-            <form
-              action="https://formspree.io/f/placeholder"
-              method="POST"
-              className="mt-8 space-y-4"
-            >
+            <form action="https://formspree.io/f/placeholder" method="POST" className="mt-8 space-y-4">
               {s.contactForm.fields.map((field, i) => (
                 <div key={i}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
                   {field.type === 'textarea' ? (
-                    <textarea
-                      name={field.name}
-                      required={field.required}
-                      rows={4}
+                    <textarea name={field.name} required={field.required} rows={4}
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2"
-                      style={{ '--tw-ring-color': primary } as React.CSSProperties}
-                    />
+                      style={{ '--tw-ring-color': primary } as React.CSSProperties} />
                   ) : (
-                    <input
-                      type={field.type}
-                      name={field.name}
-                      required={field.required}
+                    <input type={field.type} name={field.name} required={field.required}
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2"
-                      style={{ '--tw-ring-color': primary } as React.CSSProperties}
-                    />
+                      style={{ '--tw-ring-color': primary } as React.CSSProperties} />
                   )}
                 </div>
               ))}
-              <button
-                type="submit"
-                className="w-full rounded-xl px-6 py-3 text-sm font-semibold text-white transition-transform hover:scale-105"
-                style={{ backgroundColor: primary }}
-              >
+              <button type="submit" className="w-full rounded-xl px-6 py-3 text-sm font-semibold text-white transition-transform hover:scale-105" style={{ backgroundColor: primary }}>
                 {s.contactForm.buttonText}
               </button>
             </form>
@@ -344,22 +271,19 @@ export default function LandingPreview() {
         </section>
       )}
 
-      {/* Social Media */}
+      {/* Social */}
       {s.social?.enabled && s.social.links?.length > 0 && (
         <section className="px-6 py-12 border-t border-gray-200">
           <div className="max-w-3xl mx-auto text-center">
-            {s.social.title && <h3 className="text-lg font-semibold mb-4">{s.social.title}</h3>}
+            {s.social.title && <h3 className="text-lg font-semibold mb-4" style={{ fontFamily: hFont }}>{s.social.title}</h3>}
             <div className="flex items-center justify-center gap-4">
-              {s.social.links.map((link, i) => (
-                <a
-                  key={i}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center h-10 w-10 rounded-full hover:scale-110 transition-transform"
+              {s.social.links.filter(l => l.url).map((link, i) => (
+                <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center h-11 w-11 rounded-full text-sm font-bold transition-transform hover:scale-110"
                   style={{ backgroundColor: `${primary}15`, color: primary }}
+                  title={link.platform}
                 >
-                  <span className="text-sm font-bold">{link.platform.charAt(0).toUpperCase()}</span>
+                  {SOCIAL_LABELS[link.platform] || link.platform.charAt(0).toUpperCase()}
                 </a>
               ))}
             </div>
