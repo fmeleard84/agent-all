@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Body, UseGuards, Req, Res } from '@nestjs/common'
+import { Controller, Post, Get, Param, Body, UseGuards, Req, Res } from '@nestjs/common'
 import { ChatService } from './chat.service'
 import { SupabaseAuthGuard } from '../auth/auth.guard'
 import type { FastifyReply } from 'fastify'
@@ -83,5 +83,78 @@ export class ChatController {
     }
 
     res.raw.end()
+  }
+
+  @Post(':workspaceId/actions/:actionType/upload')
+  async generateActionWithUpload(
+    @Param('workspaceId') workspaceId: string,
+    @Param('actionType') actionType: string,
+    @Req() req: any,
+    @Res() res: FastifyReply,
+  ) {
+    const data = await (req as any).file()
+    if (!data) {
+      return res.status(400).send({ error: 'No file uploaded' })
+    }
+
+    const chunks: Buffer[] = []
+    for await (const chunk of data.file) {
+      chunks.push(chunk)
+    }
+    const fileBuffer = Buffer.concat(chunks)
+    const fileName = data.filename
+
+    const extractedText = await this.chatService.extractDocumentText(fileBuffer, fileName)
+
+    res.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+    })
+
+    try {
+      for await (const chunk of this.chatService.generateAction(workspaceId, actionType, extractedText)) {
+        res.raw.write(`data: ${JSON.stringify({ content: chunk })}\n\n`)
+      }
+      res.raw.write(`data: [DONE]\n\n`)
+    } catch (err) {
+      res.raw.write(`data: ${JSON.stringify({ error: String(err) })}\n\n`)
+    }
+
+    res.raw.end()
+  }
+
+  @Post(':workspaceId/actions/:actionType')
+  async generateAction(
+    @Param('workspaceId') workspaceId: string,
+    @Param('actionType') actionType: string,
+    @Res() res: FastifyReply,
+  ) {
+    res.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+    })
+
+    try {
+      for await (const chunk of this.chatService.generateAction(workspaceId, actionType)) {
+        res.raw.write(`data: ${JSON.stringify({ content: chunk })}\n\n`)
+      }
+      res.raw.write(`data: [DONE]\n\n`)
+    } catch (err) {
+      res.raw.write(`data: ${JSON.stringify({ error: String(err) })}\n\n`)
+    }
+
+    res.raw.end()
+  }
+
+  @Get(':workspaceId/actions')
+  async getActions(
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    const workspace = await this.chatService.getWorkspaceWithActions(workspaceId)
+    return workspace?.metadata?.actions || {}
   }
 }

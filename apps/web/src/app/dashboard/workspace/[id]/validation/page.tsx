@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import {
   ArrowLeft,
+  ArrowRight,
   Globe,
   Users,
   UserPlus,
@@ -20,6 +21,9 @@ import {
   ChevronDown,
   ChevronUp,
   Palette,
+  Swords,
+  MessageSquareQuote,
+  Upload,
 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -41,18 +45,42 @@ interface ActionConfig {
   color: string
   bgColor: string
   borderColor: string
+  dashboardUrl?: string
 }
 
 const ACTIONS: ActionConfig[] = [
   {
-    key: 'branding',
-    title: 'Definir ton identite & positionnement',
-    description: 'Analyse concurrentielle, posture de marque, wording et arguments differenciants.',
-    why: 'Sans positionnement clair, ta landing page et tes messages seront generiques — et personne ne s\'en souviendra.',
-    icon: Palette,
+    key: 'competitive',
+    title: 'Analyse concurrentielle',
+    description: 'Concurrents, forces/faiblesses, axes de differenciation, opportunites et risques.',
+    why: 'Connaitre tes concurrents c\'est savoir ou frapper — et ou ne pas aller.',
+    icon: Swords,
+    color: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-50 dark:bg-red-950/20',
+    borderColor: 'border-red-200 dark:border-red-800',
+    dashboardUrl: 'competitive',
+  },
+  {
+    key: 'wording',
+    title: 'Wording & Posture de marque',
+    description: 'Taglines, pitches, phrases cles, ton de voix, mots a utiliser et a eviter.',
+    why: 'Les bons mots font la difference entre "interessant" et "je veux ca".',
+    icon: MessageSquareQuote,
     color: 'text-orange-600 dark:text-orange-400',
     bgColor: 'bg-orange-50 dark:bg-orange-950/20',
     borderColor: 'border-orange-200 dark:border-orange-800',
+    dashboardUrl: 'wording',
+  },
+  {
+    key: 'identity',
+    title: 'Identite visuelle',
+    description: 'Palette couleurs, typographie, direction artistique et guidelines.',
+    why: 'Une identite forte inspire confiance avant meme que tu ouvres la bouche.',
+    icon: Palette,
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-50 dark:bg-purple-950/20',
+    borderColor: 'border-purple-200 dark:border-purple-800',
+    dashboardUrl: 'identity',
   },
   {
     key: 'landing',
@@ -108,43 +136,51 @@ const ACTIONS: ActionConfig[] = [
 
 function formatMarkdown(text: string): string {
   let html = text
-  // Remove json/html code blocks for display
   html = html.replace(/```(?:json|html)\s*\n[\s\S]*?\n```/g, '')
-  // Bold
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  // Italic
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  // Headers
   html = html.replace(/^### (.+)$/gm, '<h4 class="text-base font-semibold mt-4 mb-2">$1</h4>')
   html = html.replace(/^## (.+)$/gm, '<h3 class="text-lg font-semibold mt-5 mb-2">$1</h3>')
   html = html.replace(/^# (.+)$/gm, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>')
-  // Bullet lists
   html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-sm">$1</li>')
   html = html.replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 list-decimal text-sm">$2</li>')
-  // Paragraphs
   html = html.replace(/\n\n/g, '</p><p class="text-sm leading-relaxed mb-3">')
   html = '<p class="text-sm leading-relaxed mb-3">' + html + '</p>'
-  // Clean empty paragraphs
   html = html.replace(/<p class="text-sm leading-relaxed mb-3">\s*<\/p>/g, '')
   return html
 }
 
-function ActionCard({ config, action, onGenerate, generating }: {
+function ActionCard({ config, action, onGenerate, onUpload, generating, uploading, workspaceId }: {
   config: ActionConfig
   action?: ActionData
   onGenerate: () => void
+  onUpload: (file: File) => void
   generating: boolean
+  uploading: boolean
+  workspaceId: string
 }) {
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
   const Icon = config.icon
   const isGenerated = action?.status === 'generated'
+  const isWorking = generating || uploading
 
   function handleCopy() {
     if (!action?.content) return
     navigator.clipboard.writeText(action.content.replace(/```(?:json|html)\s*\n[\s\S]*?\n```/g, '').trim())
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleFileSelect() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.pdf,.txt,.csv,.doc,.docx'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) onUpload(file)
+    }
+    input.click()
   }
 
   return (
@@ -168,24 +204,49 @@ function ActionCard({ config, action, onGenerate, generating }: {
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-2">
-          {!isGenerated ? (
-            <button
-              onClick={onGenerate}
-              disabled={generating}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-                generating
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
-              }`}
+        <div className="mt-4 flex items-center gap-2 flex-wrap">
+          {/* Generate button */}
+          <button
+            onClick={onGenerate}
+            disabled={isWorking}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+              isWorking
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            }`}
+          >
+            {generating ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Generation en cours...</>
+            ) : (
+              <><Rocket className="h-4 w-4" /> {isGenerated ? 'Regenerer' : 'Generer'}</>
+            )}
+          </button>
+
+          {/* Upload button */}
+          <button
+            onClick={handleFileSelect}
+            disabled={isWorking}
+            className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50"
+          >
+            {uploading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Analyse du document...</>
+            ) : (
+              <><Upload className="h-4 w-4" /> Uploader un document</>
+            )}
+          </button>
+
+          {/* View dashboard button (for dashboard actions) */}
+          {isGenerated && config.dashboardUrl && (
+            <Link
+              href={`/dashboard/workspace/${workspaceId}/validation/${config.dashboardUrl}`}
+              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
             >
-              {generating ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Generation en cours...</>
-              ) : (
-                <><Rocket className="h-4 w-4" /> Lancer l&apos;agent</>
-              )}
-            </button>
-          ) : (
+              <ArrowRight className="h-4 w-4" /> Voir le resultat
+            </Link>
+          )}
+
+          {/* Expand/copy for non-dashboard actions */}
+          {isGenerated && !config.dashboardUrl && (
             <>
               <button
                 onClick={() => setExpanded(!expanded)}
@@ -201,34 +262,27 @@ function ActionCard({ config, action, onGenerate, generating }: {
               >
                 {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
               </button>
-              {config.key === 'landing' && action?.html && (
-                <button
-                  onClick={() => {
-                    const w = window.open('', '_blank')
-                    if (w) { w.document.write(action.html!); w.document.close() }
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent transition-colors"
-                  title="Voir la landing page"
-                >
-                  <ExternalLink className="h-4 w-4" /> Preview
-                </button>
-              )}
-              <button
-                onClick={onGenerate}
-                disabled={generating}
-                className="inline-flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent transition-colors disabled:opacity-50"
-                title="Regenerer"
-              >
-                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
-                Regenerer
-              </button>
             </>
+          )}
+
+          {/* Landing page preview */}
+          {config.key === 'landing' && isGenerated && action?.html && (
+            <button
+              onClick={() => {
+                const w = window.open('', '_blank')
+                if (w) { w.document.write(action.html!); w.document.close() }
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent transition-colors"
+              title="Voir la landing page"
+            >
+              <ExternalLink className="h-4 w-4" /> Preview
+            </button>
           )}
         </div>
       </div>
 
-      {/* Expanded content */}
-      {expanded && isGenerated && action?.content && (
+      {/* Expanded content for non-dashboard actions */}
+      {expanded && isGenerated && action?.content && !config.dashboardUrl && (
         <div className={`border-t ${config.bgColor} p-6`}>
           <div
             className="prose prose-sm max-w-none dark:prose-invert"
@@ -247,6 +301,7 @@ export default function ValidationPage() {
   const [actions, setActions] = useState<Record<string, ActionData>>({})
   const [loading, setLoading] = useState(true)
   const [generatingAction, setGeneratingAction] = useState<string | null>(null)
+  const [uploadingAction, setUploadingAction] = useState<string | null>(null)
   const [streamContent, setStreamContent] = useState('')
 
   const getToken = useCallback(async () => {
@@ -317,7 +372,6 @@ export default function ValidationPage() {
         }
       }
 
-      // Refresh actions from server
       const { data } = await supabase
         .from('workspaces')
         .select('metadata')
@@ -331,6 +385,70 @@ export default function ValidationPage() {
       console.error('Action generation failed:', err)
     } finally {
       setGeneratingAction(null)
+      setStreamContent('')
+    }
+  }
+
+  async function handleUpload(actionType: string, file: File) {
+    setUploadingAction(actionType)
+    setStreamContent('')
+
+    try {
+      const token = await getToken()
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch(`${API_URL}/chat/${params.id}/actions/${actionType}/upload`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      })
+
+      const reader = res.body?.getReader()
+      if (!reader) return
+
+      const decoder = new TextDecoder()
+      let content = ''
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6).trim()
+          if (data === '[DONE]') continue
+
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.content) {
+              content += parsed.content
+              setStreamContent(content)
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
+      const { data } = await supabase
+        .from('workspaces')
+        .select('metadata')
+        .eq('id', params.id)
+        .single()
+
+      if (data?.metadata?.actions) {
+        setActions(data.metadata.actions)
+      }
+    } catch (err) {
+      console.error('Upload generation failed:', err)
+    } finally {
+      setUploadingAction(null)
       setStreamContent('')
     }
   }
@@ -384,14 +502,14 @@ export default function ValidationPage() {
           <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-600 transition-all duration-500" style={{ width: `${progressPct}%` }} />
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          {completedCount === 0 && 'Commence par generer ta landing page ou preparer tes interviews client.'}
+          {completedCount === 0 && 'Commence par definir ton positionnement et ton identite de marque.'}
           {completedCount > 0 && completedCount < ACTIONS.length && `Bien joue ! Continue avec les actions restantes.`}
           {completedCount === ACTIONS.length && 'Toutes les actions sont generees. Tu as tout ce qu\'il faut pour valider ton idee !'}
         </p>
       </div>
 
       {/* Streaming preview */}
-      {generatingAction && streamContent && (
+      {(generatingAction || uploadingAction) && streamContent && (
         <div className="rounded-xl border bg-card p-6">
           <div className="flex items-center gap-2 mb-3">
             <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
@@ -412,14 +530,17 @@ export default function ValidationPage() {
             config={config}
             action={actions[config.key]}
             onGenerate={() => handleGenerate(config.key)}
+            onUpload={(file) => handleUpload(config.key, file)}
             generating={generatingAction === config.key}
+            uploading={uploadingAction === config.key}
+            workspaceId={params.id}
           />
         ))}
       </div>
 
       {/* Philosophy */}
       <div className="rounded-xl bg-muted/30 border border-dashed p-6 text-center space-y-2">
-        <p className="text-sm font-medium">Idee → Analyse → Action → Validation</p>
+        <p className="text-sm font-medium">Idee &rarr; Analyse &rarr; Action &rarr; Validation</p>
         <p className="text-xs text-muted-foreground">Le but n&apos;est pas de planifier pendant 6 mois. C&apos;est de tester vite, apprendre vite, et ajuster.</p>
       </div>
 

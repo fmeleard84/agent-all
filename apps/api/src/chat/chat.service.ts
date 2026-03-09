@@ -118,7 +118,7 @@ export class ChatService {
     return this.workspaceService.findById(workspaceId)
   }
 
-  async *generateAction(workspaceId: string, actionType: string): AsyncGenerator<string> {
+  async *generateAction(workspaceId: string, actionType: string, uploadedDocument?: string): AsyncGenerator<string> {
     const workspace = await this.workspaceService.findById(workspaceId)
     if (!workspace) throw new Error(`Workspace ${workspaceId} not found`)
 
@@ -132,7 +132,7 @@ export class ChatService {
       .map((m) => `[${m.role === 'user' ? 'Entrepreneur' : 'Mentor'}]: ${m.content}`)
       .join('\n\n')
 
-    const prompt = this.buildActionPrompt(actionType, dashboard, conversationContext)
+    const prompt = this.buildActionPrompt(actionType, dashboard, conversationContext, uploadedDocument)
     if (!prompt) throw new Error(`Unknown action type: ${actionType}`)
 
     const stream = await this.openai.chat.completions.create({
@@ -159,7 +159,7 @@ export class ChatService {
     this.extractAndStoreAction(workspaceId, actionType, fullResponse)
   }
 
-  private buildActionPrompt(actionType: string, dashboard: Record<string, unknown>, conversation: string): { system: string; user: string } | null {
+  private buildActionPrompt(actionType: string, dashboard: Record<string, unknown>, conversation: string, uploadedDocument?: string): { system: string; user: string } | null {
     const summary = dashboard.summary || ''
     const verdict = dashboard.verdict || ''
     const competitors = JSON.stringify(dashboard.competitors || [])
@@ -180,6 +180,12 @@ Verdict: ${verdict}
 Forces: ${strengths}
 Marche: ${market}
 Concurrents: ${competitors}`
+
+    const documentContext = uploadedDocument
+      ? `\n\n=== DOCUMENT UPLOADE PAR L'ENTREPRENEUR ===\n${uploadedDocument.substring(0, 6000)}\n\nINSTRUCTION : Analyse ce document existant. Integre ses elements dans ton resultat. Complete ce qui manque, ameliore ce qui peut l'etre, et signale les incoherences si tu en trouves.`
+      : ''
+
+    const fullContext = context + documentContext
 
     const prompts: Record<string, { system: string; user: string }> = {
       landing: {
@@ -211,7 +217,7 @@ SPECIFICATIONS TECHNIQUES :
 
 IMPORTANT : Genere le HTML complet dans un bloc \`\`\`html ... \`\`\` puis un bloc \`\`\`json avec les metadonnees.
 Reponds en francais.`,
-        user: `${context}
+        user: `${fullContext}
 
 Landing page test data: ${landingPageTest}
 MVP: ${mvpPlan}
@@ -255,7 +261,7 @@ Pour chaque question :
 
 A la fin, genere un bloc \`\`\`json avec le script structure.
 Reponds en francais.`,
-        user: `${context}
+        user: `${fullContext}
 
 Validation client: ${clientValidation}
 
@@ -301,7 +307,7 @@ Pour chaque canal :
 
 A la fin, genere un bloc \`\`\`json avec le plan structure.
 Reponds en francais.`,
-        user: `${context}
+        user: `${fullContext}
 
 Plan 10 premiers clients: ${firstTenCustomers}
 
@@ -345,7 +351,7 @@ Pour chaque option :
 
 A la fin, genere un bloc \`\`\`json avec la strategie structuree.
 Reponds en francais.`,
-        user: `${context}
+        user: `${fullContext}
 
 Benchmark pricing: ${pricingBenchmark}
 
@@ -385,73 +391,161 @@ Pour chaque metrique :
 
 A la fin, genere un bloc \`\`\`json avec le tracker structure.
 Reponds en francais.`,
-        user: `${context}
+        user: `${fullContext}
 
 Genere un systeme de tracking de validation ADAPTE a ce projet. Pas de metriques generiques — des signaux specifiques a son marche et son modele.
 
 A la fin, genere un bloc JSON avec: {"metrics": [...], "weeklyTemplate": {...}, "goNoGo": {"go": [...], "pivot": [...], "stop": [...]}, "tools": [...], "timeframe": "...", "status": "generated"}`
       },
-      branding: {
-        system: `Tu es un directeur de strategie de marque avec 20 ans d'experience en branding startup. Tu as travaille avec des marques comme Doctolib, Alan, Qonto, Pennylane — tu sais comment on construit un positionnement fort a partir de zero.
+      competitive: {
+        system: `Tu es un analyste strategique specialise en veille concurrentielle pour startups. Tu as conseille 200+ entreprises sur leur positionnement face a la concurrence.
 
-Tu dois produire une ANALYSE STRATEGIQUE COMPLETE de l'identite de marque, basee sur la conversation reelle avec l'entrepreneur. PAS de conseils generiques — tout doit etre specifique a CE projet, CE marche, CE positionnement.
+REGLE ABSOLUE : Lis la conversation complete avec l'entrepreneur. Ton analyse doit etre 100% specifique a CE projet, CE marche, CES concurrents.
 
-STRUCTURE OBLIGATOIRE :
+Tu dois produire une analyse structuree en JSON strict. Pas de texte libre — uniquement du JSON.
 
-## 1. Analyse concurrentielle approfondie
-Pour chaque concurrent majeur (3-5) :
-- Leur positionnement exact (tagline, promesse, ton)
-- Leurs forces et faiblesses de marque
-- Leur pricing et perception de valeur
-- Les failles dans leur communication ou tu peux t'engouffrer
-
-## 2. Ton positionnement unique
-- Le "territory de marque" : l'espace que tu occupes et que personne d'autre ne prend
-- La promesse centrale en une phrase (pas un slogan — la verite profonde de ton offre)
-- Le "enemy" : contre quoi tu te bats (un systeme, une habitude, un concurrent)
-- Le "belief" : ce que tu crois que les autres ne croient pas encore
-
-## 3. Posture de marque
-- Personnalite (5 traits de caractere avec exemples concrets d'expression)
-- Ton de voix : formel/informel, expert/accessible, provocateur/rassurant — avec 3 exemples de phrases dans ce ton
-- Ce que ta marque dit vs ce que ta marque ne dit JAMAIS
-- References visuelles et d'attitude (2-3 marques qui inspirent le bon registre, meme hors secteur)
-
-## 4. Arsenal de wording
-- Tagline principale (3 propositions avec justification)
-- Pitch 30 secondes (ecrit mot pour mot)
-- Pitch email (3 lignes pour du cold outreach)
-- 5 phrases cles reutilisables (pour LP, posts LinkedIn, pitch deck)
-- Les mots a utiliser vs les mots a eviter
-
-## 5. Insights marche & angles differenciants
-- 3 insights marche que tes concurrents ignorent ou sous-exploitent
-- Ton angle d'attaque principal et pourquoi il fonctionne maintenant
-- Les arguments commerciaux classes par force (must-have vs nice-to-have)
-
-## 6. Recommandations identite visuelle
-- Direction de palette couleurs (avec justification strategique)
-- Style typographique recommande (serif/sans-serif, moderne/classique)
-- Mood board textuel : 5 mots-cles visuels qui definissent l'univers
-- NE PAS generer de logo — donner les principes directeurs
-
-A la fin, genere un bloc \`\`\`json avec les donnees structurees.
-Reponds en francais. Sois tranchant, specifique, et ancre dans la realite du projet.`,
-        user: `${context}
-
-Analyse cette conversation en profondeur. L'entrepreneur a discute de son projet avec un mentor — utilise TOUT ce contexte pour produire une analyse de marque ULTRA SPECIFIQUE a son cas.
-
-A la fin, genere un bloc JSON avec:
+Le JSON doit suivre EXACTEMENT cette structure :
 {
-  "positioning": { "territory": "...", "promise": "...", "enemy": "...", "belief": "..." },
-  "personality": { "traits": ["...", "...", "...", "...", "..."], "toneOfVoice": "...", "doesSay": ["..."], "neverSays": ["..."] },
-  "taglines": [{ "text": "...", "rationale": "..." }],
-  "pitches": { "thirtySeconds": "...", "email": "...", "keyPhrases": ["..."] },
-  "competitiveInsights": [{ "competitor": "...", "strength": "...", "weakness": "...", "opportunity": "..." }],
-  "marketInsights": ["...", "...", "..."],
-  "visualDirection": { "colors": "...", "typography": "...", "moodKeywords": ["..."] },
+  "competitors": [
+    {
+      "name": "Nom du concurrent",
+      "website": "URL si connue",
+      "positioning": "Leur positionnement en une phrase",
+      "pricing": "Leur modele de prix",
+      "strengths": ["Force 1", "Force 2", "Force 3"],
+      "weaknesses": ["Faiblesse 1", "Faiblesse 2", "Faiblesse 3"],
+      "threatLevel": "haute|moyenne|faible"
+    }
+  ],
+  "differentiationAxes": [
+    {
+      "axis": "Nom de l'axe",
+      "description": "Explication en 2-3 phrases",
+      "strengthScore": 8,
+      "competitors": "Comment les concurrents se positionnent sur cet axe"
+    }
+  ],
+  "opportunities": [
+    {
+      "title": "Titre de l'opportunite",
+      "description": "Description en 2-3 phrases",
+      "actionable": "Ce qu'il faut faire concretement pour saisir cette opportunite"
+    }
+  ],
+  "risks": [
+    {
+      "title": "Titre du risque",
+      "description": "Description",
+      "probability": "haute|moyenne|faible",
+      "impact": "fort|moyen|faible",
+      "mitigation": "Comment mitiger ce risque"
+    }
+  ],
+  "swotSummary": {
+    "strengths": ["Force 1", "Force 2", "Force 3"],
+    "weaknesses": ["Faiblesse 1", "Faiblesse 2"],
+    "opportunities": ["Opportunite 1", "Opportunite 2"],
+    "threats": ["Menace 1", "Menace 2"]
+  },
   "status": "generated"
-}`
+}
+
+IMPORTANT : Reponds UNIQUEMENT avec le bloc JSON dans un bloc \`\`\`json. Pas de texte avant ou apres.
+Sois specifique : vrais noms de concurrents, vrais prix, vrais positionnements.
+Reponds en francais.`,
+        user: `${fullContext}\n\nAnalyse les concurrents de ce projet. Identifie 3-5 concurrents reels, leurs forces/faiblesses, les axes de differenciation, les opportunites et les risques.\n\nReponds UNIQUEMENT avec un bloc JSON valide.`
+      },
+      wording: {
+        system: `Tu es un directeur de strategie de marque et expert en copywriting. Tu as defini le wording et la posture de marques comme Doctolib, Alan, Qonto.
+
+REGLE ABSOLUE : Lis la conversation complete. Chaque mot, chaque phrase doit etre taillee pour CE projet.
+
+Tu dois produire une analyse structuree en JSON strict. Pas de texte libre — uniquement du JSON.
+
+Le JSON doit suivre EXACTEMENT cette structure :
+{
+  "positioning": {
+    "territory": "L'espace de marque que tu occupes",
+    "promise": "La promesse centrale en une phrase",
+    "enemy": "Contre quoi tu te bats",
+    "belief": "Ce que tu crois que les autres ne croient pas"
+  },
+  "personality": {
+    "traits": [
+      { "trait": "Trait de caractere", "example": "Exemple concret d'expression de ce trait" }
+    ],
+    "toneOfVoice": "Description du ton en 2-3 phrases",
+    "toneExamples": ["Phrase exemple 1 dans ce ton", "Phrase exemple 2", "Phrase exemple 3"],
+    "doesSay": ["Ce que la marque dit", "Autre chose qu'elle dit"],
+    "neverSays": ["Ce que la marque ne dit jamais", "Autre chose qu'elle ne dit jamais"]
+  },
+  "taglines": [
+    { "text": "Proposition de tagline", "rationale": "Pourquoi cette tagline fonctionne" }
+  ],
+  "pitches": {
+    "thirtySeconds": "Le pitch de 30 secondes mot pour mot",
+    "email": "Le pitch email en 3 lignes pour du cold outreach",
+    "keyPhrases": ["Phrase cle reutilisable 1", "Phrase cle 2", "Phrase cle 3", "Phrase cle 4", "Phrase cle 5"]
+  },
+  "lexicon": {
+    "useWords": ["Mot a utiliser 1", "Mot 2", "Mot 3", "Mot 4", "Mot 5"],
+    "avoidWords": ["Mot a eviter 1", "Mot 2", "Mot 3", "Mot 4", "Mot 5"]
+  },
+  "status": "generated"
+}
+
+IMPORTANT : Reponds UNIQUEMENT avec le bloc JSON dans un bloc \`\`\`json. Pas de texte avant ou apres.
+Reponds en francais. Sois tranchant et specifique.`,
+        user: `${fullContext}\n\nDefinis le wording et la posture de marque pour ce projet. Positionnement, personnalite, taglines, pitches, lexique.\n\nReponds UNIQUEMENT avec un bloc JSON valide.`
+      },
+      identity: {
+        system: `Tu es un directeur artistique et designer de marque. Tu as cree l'identite visuelle de startups qui ont leve des millions. Tu sais que le design n'est pas decoratif — c'est strategique.
+
+REGLE ABSOLUE : Lis la conversation complete. L'identite visuelle doit refleter le positionnement et la personnalite de CE projet.
+
+Tu dois produire une analyse structuree en JSON strict. Pas de texte libre — uniquement du JSON.
+
+Le JSON doit suivre EXACTEMENT cette structure :
+{
+  "colorPalette": {
+    "primary": { "hex": "#7c3aed", "name": "Nom de la couleur", "usage": "Ou et quand l'utiliser", "rationale": "Pourquoi cette couleur pour CE projet" },
+    "secondary": { "hex": "#...", "name": "...", "usage": "...", "rationale": "..." },
+    "accent": { "hex": "#...", "name": "...", "usage": "...", "rationale": "..." },
+    "neutral": { "hex": "#...", "name": "...", "usage": "...", "rationale": "..." },
+    "background": { "hex": "#...", "name": "...", "usage": "...", "rationale": "..." }
+  },
+  "typography": {
+    "headingFont": "Nom de la font pour les titres",
+    "bodyFont": "Nom de la font pour le texte",
+    "style": "serif|sans-serif|mixed",
+    "hierarchy": {
+      "h1": "Taille, poids, usage",
+      "h2": "Taille, poids, usage",
+      "body": "Taille, poids, usage",
+      "caption": "Taille, poids, usage"
+    },
+    "rationale": "Pourquoi ces choix typographiques pour CE projet"
+  },
+  "visualDirection": {
+    "moodKeywords": ["Mot-cle visuel 1", "Mot-cle 2", "Mot-cle 3", "Mot-cle 4", "Mot-cle 5"],
+    "references": [
+      { "brand": "Nom de la marque reference", "why": "Pourquoi cette reference est pertinente", "takeaway": "Ce qu'il faut en retenir" }
+    ],
+    "atmosphere": "Description de l'univers visuel en 3-4 phrases"
+  },
+  "logoGuidelines": {
+    "direction": "Minimaliste|Bold|Elegant|Playful",
+    "type": "Wordmark|Symbole|Combinaison",
+    "principles": ["Principe 1", "Principe 2", "Principe 3"],
+    "avoid": ["A eviter 1", "A eviter 2"]
+  },
+  "status": "generated"
+}
+
+IMPORTANT : Reponds UNIQUEMENT avec le bloc JSON dans un bloc \`\`\`json. Pas de texte avant ou apres.
+Les couleurs doivent etre des codes hex valides.
+Reponds en francais.`,
+        user: `${fullContext}\n\nDefinis l'identite visuelle pour ce projet. Palette couleurs, typographie, direction artistique, guidelines logo.\n\nReponds UNIQUEMENT avec un bloc JSON valide.`
       },
     }
 
