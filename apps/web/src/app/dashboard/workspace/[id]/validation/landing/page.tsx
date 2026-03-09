@@ -86,6 +86,7 @@ interface LandingData {
   }
   branding: {
     primaryColor: string
+    secondaryColor: string
     accentColor: string
     headingFont: string
     bodyFont: string
@@ -206,6 +207,7 @@ export default function LandingEditor() {
         branding: {
           ...prev.branding,
           primaryColor: identity.colorPalette?.primary?.hex || prev.branding.primaryColor,
+          secondaryColor: identity.colorPalette?.secondary?.hex || prev.branding.secondaryColor,
           accentColor: identity.colorPalette?.accent?.hex || prev.branding.accentColor,
           headingFont: identity.typography?.headingFont || prev.branding.headingFont,
           bodyFont: identity.typography?.bodyFont || prev.branding.bodyFont,
@@ -280,7 +282,7 @@ export default function LandingEditor() {
       {/* Branding bar */}
       <div className="rounded-xl border bg-card p-4 flex items-center gap-6 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">Couleur primaire</span>
+          <span className="text-xs font-medium text-muted-foreground">Primaire</span>
           <input
             type="color"
             value={data.branding.primaryColor}
@@ -290,7 +292,17 @@ export default function LandingEditor() {
           <code className="text-xs text-muted-foreground">{data.branding.primaryColor}</code>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">Couleur accent</span>
+          <span className="text-xs font-medium text-muted-foreground">Secondaire</span>
+          <input
+            type="color"
+            value={data.branding.secondaryColor}
+            onChange={e => updateField('branding.secondaryColor', e.target.value)}
+            className="h-8 w-8 rounded-md border cursor-pointer"
+          />
+          <code className="text-xs text-muted-foreground">{data.branding.secondaryColor}</code>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Accent</span>
           <input
             type="color"
             value={data.branding.accentColor}

@@ -30,6 +30,7 @@ interface LandingData {
   }
   branding: {
     primaryColor: string
+    secondaryColor: string
     accentColor: string
     headingFont: string
     bodyFont: string
@@ -91,7 +92,8 @@ export default function LandingPreview() {
 
   const { sections: s, branding: b } = data
   const primary = b.primaryColor || '#7c3aed'
-  const accent = b.accentColor || '#a78bfa'
+  const secondary = b.secondaryColor || '#a78bfa'
+  const accent = b.accentColor || secondary
 
   return (
     <div style={{ fontFamily: `${b.bodyFont || 'Inter'}, system-ui, sans-serif` }} className="bg-white text-gray-900 min-h-screen">

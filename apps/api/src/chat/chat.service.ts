@@ -189,107 +189,134 @@ Concurrents: ${competitors}`
     const fullContext = context + documentContext
 
     const prompts: Record<string, { system: string; user: string }> = {
-      landing: {
-        system: `Tu es un expert en copywriting de conversion et en landing pages. Tu as cree des pages pour YC startups, des SaaS B2B, et des produits consumer. Tu sais que le storytelling bat toujours les bullet points.
+      landing: (() => {
+        // Pull identity/wording data for dynamic prompt
+        const actions = metadata?.actions || {}
+        const identity = actions.identity?.structured
+        const wording = actions.wording?.structured
+
+        // Build dynamic branding from identity data
+        const brandPrimary = identity?.colorPalette?.primary?.hex || '#7c3aed'
+        const brandSecondary = identity?.colorPalette?.secondary?.hex || '#a78bfa'
+        const brandAccent = identity?.colorPalette?.accent?.hex || brandSecondary
+        const brandNeutral = identity?.colorPalette?.neutral?.hex
+        const brandBackground = identity?.colorPalette?.background?.hex
+        const headingFont = identity?.typography?.headingFont || 'Inter'
+        const bodyFont = identity?.typography?.bodyFont || 'Inter'
+
+        // Build full identity context
+        let identityContext = ''
+        if (identity) {
+          identityContext = `
+=== IDENTITE VISUELLE DE LA MARQUE (OBLIGATOIRE A RESPECTER) ===
+PALETTE COMPLETE :
+- Primaire : ${identity.colorPalette?.primary?.hex} (${identity.colorPalette?.primary?.name}) — ${identity.colorPalette?.primary?.usage}
+- Secondaire : ${identity.colorPalette?.secondary?.hex} (${identity.colorPalette?.secondary?.name}) — ${identity.colorPalette?.secondary?.usage}
+- Accent : ${identity.colorPalette?.accent?.hex} (${identity.colorPalette?.accent?.name}) — ${identity.colorPalette?.accent?.usage}
+- Neutre : ${identity.colorPalette?.neutral?.hex} (${identity.colorPalette?.neutral?.name}) — ${identity.colorPalette?.neutral?.usage}
+- Fond : ${identity.colorPalette?.background?.hex} (${identity.colorPalette?.background?.name}) — ${identity.colorPalette?.background?.usage}
+
+TYPOGRAPHIE :
+- Font titres : ${identity.typography?.headingFont} (UTILISE CETTE FONT, PAS Inter)
+- Font texte : ${identity.typography?.bodyFont} (UTILISE CETTE FONT, PAS Inter)
+- Style : ${identity.typography?.style}
+- Justification : ${identity.typography?.rationale}
+
+DIRECTION ARTISTIQUE :
+- Mots-cles visuels : ${identity.visualDirection?.moodKeywords?.join(', ')}
+- Atmosphere : ${identity.visualDirection?.atmosphere}
+`
+        }
+
+        // Build full wording context
+        let wordingContext = ''
+        if (wording) {
+          wordingContext = `
+=== WORDING & POSTURE DE MARQUE (OBLIGATOIRE A RESPECTER) ===
+POSITIONNEMENT :
+- Territoire : ${wording.positioning?.territory}
+- Promesse : ${wording.positioning?.promise}
+- Ennemi : ${wording.positioning?.enemy}
+- Belief : ${wording.positioning?.belief}
+
+TON DE VOIX : ${wording.personality?.toneOfVoice}
+La marque dit : ${wording.personality?.doesSay?.join(' | ')}
+La marque ne dit jamais : ${wording.personality?.neverSays?.join(' | ')}
+
+TAGLINES DISPONIBLES :
+${wording.taglines?.map((t: any) => `- "${t.text}" (${t.rationale})`).join('\n')}
+
+PITCH 30 SECONDES : ${wording.pitches?.thirtySeconds}
+
+PHRASES CLES : ${wording.pitches?.keyPhrases?.join(' | ')}
+
+LEXIQUE :
+- Mots a utiliser : ${wording.lexicon?.useWords?.join(', ')}
+- Mots a eviter : ${wording.lexicon?.avoidWords?.join(', ')}
+`
+        }
+
+        return {
+          system: `Tu es un expert en copywriting de conversion et en landing pages. Tu as cree des pages pour YC startups, des SaaS B2B, et des produits consumer.
 
 REGLES ABSOLUES :
 - Tu DOIS lire la conversation complete pour comprendre le positionnement EXACT du projet
 - AUCUN texte generique. Chaque phrase doit etre specifique a CE projet
 - Le storytelling doit suivre le framework PAS (Problem → Agitation → Solution)
 - La page doit donner envie de laisser son email, pas juste "informer"
-
-Tu dois generer UNIQUEMENT un JSON structure. Pas de HTML. Le JSON sera utilise par un template Next.js fixe.
-
-Si des donnees d'identite visuelle ou de wording existent, utilise-les (couleurs, fonts, taglines, positionnement).
+${identity ? `
+REGLE CRITIQUE — IDENTITE VISUELLE :
+- Tu DOIS utiliser les VRAIES couleurs de la charte graphique dans le champ "branding"
+- Tu DOIS utiliser les VRAIES fonts de la charte (PAS "Inter" par defaut)
+- La couleur primaire EST ${brandPrimary}, la secondaire EST ${brandSecondary}, l'accent EST ${brandAccent}
+- La font titres EST "${headingFont}", la font texte EST "${bodyFont}"
+- NE METS PAS de valeurs par defaut. Utilise EXACTEMENT les couleurs et fonts de l'identite.
+` : ''}${wording ? `
+REGLE CRITIQUE — WORDING :
+- Le headline DOIT s'inspirer des taglines et du positionnement fournis
+- Le ton de voix DOIT correspondre a la posture de marque
+- Utilise les mots du lexique "a utiliser", evite ceux "a eviter"
+- Le pitch et les phrases cles doivent etre integres dans le contenu
+` : ''}
+Tu dois generer UNIQUEMENT un JSON structure. Le JSON sera utilise par un template Next.js fixe.
 
 Le JSON doit suivre EXACTEMENT cette structure :
 {
   "sections": {
-    "hero": {
-      "enabled": true,
-      "headline": "Headline percutant et emotionnel — pas descriptif",
-      "subheadline": "Sous-titre qui explique la valeur en 1 phrase claire",
-      "ctaText": "Texte du bouton CTA"
-    },
-    "problem": {
-      "enabled": true,
-      "title": "Titre de la section probleme",
-      "painPoints": ["Point de douleur 1 (phrase narrative)", "Point 2", "Point 3"]
-    },
-    "solution": {
-      "enabled": true,
-      "title": "Titre de la section solution",
-      "description": "Description en 2-3 phrases de comment le projet resout le probleme",
-      "features": [
-        { "title": "Titre feature 1", "description": "Description concrete avec chiffre si possible" },
-        { "title": "Titre feature 2", "description": "Description" },
-        { "title": "Titre feature 3", "description": "Description" }
-      ]
-    },
-    "benefits": {
-      "enabled": true,
-      "title": "Titre de la section benefices",
-      "items": [
-        { "icon": "zap", "title": "Benefice 1", "description": "Description" },
-        { "icon": "shield", "title": "Benefice 2", "description": "Description" },
-        { "icon": "clock", "title": "Benefice 3", "description": "Description" }
-      ]
-    },
-    "testimonial": {
-      "enabled": true,
-      "quote": "Temoignage fictif realiste d'un early adopter",
-      "author": "Prenom Nom",
-      "role": "Poste",
-      "company": "Entreprise"
-    },
-    "cta": {
-      "enabled": true,
-      "title": "Titre d'appel a l'action final",
-      "subtitle": "Sous-titre persuasif",
-      "ctaText": "Texte du bouton"
-    },
-    "emailCapture": {
-      "enabled": true,
-      "title": "Titre de la section capture email",
-      "subtitle": "Sous-titre incitatif",
-      "placeholder": "Placeholder du champ email",
-      "buttonText": "Texte du bouton",
-      "reassurance": "Texte de reassurance (ex: Pas de spam, juste les actus)"
-    }
+    "hero": { "enabled": true, "headline": "...", "subheadline": "...", "ctaText": "..." },
+    "problem": { "enabled": true, "title": "...", "painPoints": ["...", "...", "..."] },
+    "solution": { "enabled": true, "title": "...", "description": "...", "features": [{ "title": "...", "description": "..." }] },
+    "benefits": { "enabled": true, "title": "...", "items": [{ "icon": "zap|shield|clock|star|target|heart|rocket|check|trending-up|users", "title": "...", "description": "..." }] },
+    "testimonial": { "enabled": true, "quote": "...", "author": "...", "role": "...", "company": "..." },
+    "cta": { "enabled": true, "title": "...", "subtitle": "...", "ctaText": "..." },
+    "emailCapture": { "enabled": true, "title": "...", "subtitle": "...", "placeholder": "...", "buttonText": "...", "reassurance": "..." }
   },
   "branding": {
-    "primaryColor": "#7c3aed",
-    "accentColor": "#a78bfa",
-    "headingFont": "Inter",
-    "bodyFont": "Inter"
+    "primaryColor": "${brandPrimary}",
+    "secondaryColor": "${brandSecondary}",
+    "accentColor": "${brandAccent}",
+    "headingFont": "${headingFont}",
+    "bodyFont": "${bodyFont}"
   },
   "status": "generated"
 }
 
-ICONS DISPONIBLES pour benefits.items[].icon : "zap", "shield", "clock", "star", "target", "heart", "rocket", "check", "trending-up", "users"
-
 IMPORTANT : Reponds UNIQUEMENT avec le bloc JSON dans un bloc \`\`\`json. Pas de texte avant ou apres.
 Reponds en francais. Sois percutant et specifique.`,
-        user: `${fullContext}
+          user: `${fullContext}
 
 Landing page test data: ${landingPageTest}
 MVP: ${mvpPlan}
-
-${(() => {
-  // Pull identity/wording data if available
-  const actions = metadata?.actions || {}
-  const identity = actions.identity?.structured
-  const wording = actions.wording?.structured
-  let extra = ''
-  if (identity) extra += `\n=== IDENTITE VISUELLE GENEREE ===\nCouleur primaire: ${identity.colorPalette?.primary?.hex}\nCouleur secondaire: ${identity.colorPalette?.secondary?.hex}\nCouleur accent: ${identity.colorPalette?.accent?.hex}\nFont titres: ${identity.typography?.headingFont}\nFont texte: ${identity.typography?.bodyFont}\n`
-  if (wording) extra += `\n=== WORDING GENERE ===\nTaglines: ${wording.taglines?.map((t: any) => t.text).join(' | ')}\nPromesse: ${wording.positioning?.promise}\nTerritoire: ${wording.positioning?.territory}\nTon: ${wording.personality?.toneOfVoice}\n`
-  return extra
-})()}
-
-IMPORTANT : Lis la conversation et utilise le positionnement EXACT. Genere un JSON structure pour le template de landing page.
+${identityContext}${wordingContext}
+INSTRUCTIONS FINALES :
+- Le champ "branding" DOIT contenir les couleurs et fonts EXACTES de l'identite visuelle ci-dessus
+- Le headline hero DOIT s'inspirer des taglines et du positionnement
+- Le ton du texte DOIT respecter la posture de marque
+- Les mots utilises DOIVENT venir du lexique de la marque
 
 Reponds UNIQUEMENT avec un bloc JSON valide.`
-      },
+        }
+      })(),
       interview: {
         system: `Tu es un expert en customer discovery (methode "The Mom Test" de Rob Fitzpatrick). Tu as conduit 500+ interviews clients pour des startups early-stage.
 
