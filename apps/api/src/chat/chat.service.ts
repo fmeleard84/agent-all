@@ -132,7 +132,8 @@ export class ChatService {
       .map((m) => `[${m.role === 'user' ? 'Entrepreneur' : 'Mentor'}]: ${m.content}`)
       .join('\n\n')
 
-    const prompt = this.buildActionPrompt(actionType, dashboard, conversationContext, uploadedDocument)
+    const metadata = (workspace as any).metadata || {}
+    const prompt = this.buildActionPrompt(actionType, dashboard, conversationContext, uploadedDocument, metadata)
     if (!prompt) throw new Error(`Unknown action type: ${actionType}`)
 
     const stream = await this.openai.chat.completions.create({
@@ -159,7 +160,7 @@ export class ChatService {
     this.extractAndStoreAction(workspaceId, actionType, fullResponse)
   }
 
-  private buildActionPrompt(actionType: string, dashboard: Record<string, unknown>, conversation: string, uploadedDocument?: string): { system: string; user: string } | null {
+  private buildActionPrompt(actionType: string, dashboard: Record<string, unknown>, conversation: string, uploadedDocument?: string, metadata?: Record<string, any>): { system: string; user: string } | null {
     const summary = dashboard.summary || ''
     const verdict = dashboard.verdict || ''
     const competitors = JSON.stringify(dashboard.competitors || [])
@@ -197,36 +198,97 @@ REGLES ABSOLUES :
 - Le storytelling doit suivre le framework PAS (Problem → Agitation → Solution)
 - La page doit donner envie de laisser son email, pas juste "informer"
 
-STRUCTURE DE LA PAGE HTML :
-1. **Hero** : Headline percutant (pas descriptif — emotionnel), sous-titre qui explique la valeur en 1 phrase, CTA email capture
-2. **Le probleme** : Storytelling du probleme vecu par le client cible (3-4 phrases narratives, pas des bullet points)
-3. **L'agitation** : Pourquoi les solutions actuelles ne marchent pas (nommer les alternatives et leurs defauts)
-4. **La solution** : Comment ce projet resout le probleme differemment (3 benefices concrets avec chiffres si possible)
-5. **Social proof / credibilite** : Temoignage fictif realiste OU chiffres du marche OU argument d'autorite
-6. **CTA final** : Formulaire email avec micro-copy persuasif + message de confirmation
+Tu dois generer UNIQUEMENT un JSON structure. Pas de HTML. Le JSON sera utilise par un template Next.js fixe.
 
-SPECIFICATIONS TECHNIQUES :
-- HTML complet avec CSS inline, responsive, mobile-first
-- Style minimaliste premium (Stripe/Linear/Vercel)
-- Fond blanc, texte sombre, accent violet (#7c3aed)
-- Font : Inter via Google Fonts
-- Le formulaire email doit avoir : input email, bouton CTA, texte de reassurance ("Pas de spam, juste les actus")
-- Le formulaire doit utiliser l'attribut action="https://formspree.io/f/placeholder" method="POST" pour etre fonctionnel (l'utilisateur remplacera le placeholder)
-- Animations CSS subtiles (fade-in au scroll avec IntersectionObserver)
-- Meta tags Open Graph pour le partage social
+Si des donnees d'identite visuelle ou de wording existent, utilise-les (couleurs, fonts, taglines, positionnement).
 
-IMPORTANT : Genere le HTML complet dans un bloc \`\`\`html ... \`\`\` puis un bloc \`\`\`json avec les metadonnees.
-Reponds en francais.`,
+Le JSON doit suivre EXACTEMENT cette structure :
+{
+  "sections": {
+    "hero": {
+      "enabled": true,
+      "headline": "Headline percutant et emotionnel — pas descriptif",
+      "subheadline": "Sous-titre qui explique la valeur en 1 phrase claire",
+      "ctaText": "Texte du bouton CTA"
+    },
+    "problem": {
+      "enabled": true,
+      "title": "Titre de la section probleme",
+      "painPoints": ["Point de douleur 1 (phrase narrative)", "Point 2", "Point 3"]
+    },
+    "solution": {
+      "enabled": true,
+      "title": "Titre de la section solution",
+      "description": "Description en 2-3 phrases de comment le projet resout le probleme",
+      "features": [
+        { "title": "Titre feature 1", "description": "Description concrete avec chiffre si possible" },
+        { "title": "Titre feature 2", "description": "Description" },
+        { "title": "Titre feature 3", "description": "Description" }
+      ]
+    },
+    "benefits": {
+      "enabled": true,
+      "title": "Titre de la section benefices",
+      "items": [
+        { "icon": "zap", "title": "Benefice 1", "description": "Description" },
+        { "icon": "shield", "title": "Benefice 2", "description": "Description" },
+        { "icon": "clock", "title": "Benefice 3", "description": "Description" }
+      ]
+    },
+    "testimonial": {
+      "enabled": true,
+      "quote": "Temoignage fictif realiste d'un early adopter",
+      "author": "Prenom Nom",
+      "role": "Poste",
+      "company": "Entreprise"
+    },
+    "cta": {
+      "enabled": true,
+      "title": "Titre d'appel a l'action final",
+      "subtitle": "Sous-titre persuasif",
+      "ctaText": "Texte du bouton"
+    },
+    "emailCapture": {
+      "enabled": true,
+      "title": "Titre de la section capture email",
+      "subtitle": "Sous-titre incitatif",
+      "placeholder": "Placeholder du champ email",
+      "buttonText": "Texte du bouton",
+      "reassurance": "Texte de reassurance (ex: Pas de spam, juste les actus)"
+    }
+  },
+  "branding": {
+    "primaryColor": "#7c3aed",
+    "accentColor": "#a78bfa",
+    "headingFont": "Inter",
+    "bodyFont": "Inter"
+  },
+  "status": "generated"
+}
+
+ICONS DISPONIBLES pour benefits.items[].icon : "zap", "shield", "clock", "star", "target", "heart", "rocket", "check", "trending-up", "users"
+
+IMPORTANT : Reponds UNIQUEMENT avec le bloc JSON dans un bloc \`\`\`json. Pas de texte avant ou apres.
+Reponds en francais. Sois percutant et specifique.`,
         user: `${fullContext}
 
 Landing page test data: ${landingPageTest}
 MVP: ${mvpPlan}
 
-IMPORTANT : Lis attentivement la conversation ci-dessus. Le positionnement, le storytelling, et le wording doivent refleter EXACTEMENT ce qui a ete discute. Pas de contenu generique.
+${(() => {
+  // Pull identity/wording data if available
+  const actions = metadata?.actions || {}
+  const identity = actions.identity?.structured
+  const wording = actions.wording?.structured
+  let extra = ''
+  if (identity) extra += `\n=== IDENTITE VISUELLE GENEREE ===\nCouleur primaire: ${identity.colorPalette?.primary?.hex}\nCouleur secondaire: ${identity.colorPalette?.secondary?.hex}\nCouleur accent: ${identity.colorPalette?.accent?.hex}\nFont titres: ${identity.typography?.headingFont}\nFont texte: ${identity.typography?.bodyFont}\n`
+  if (wording) extra += `\n=== WORDING GENERE ===\nTaglines: ${wording.taglines?.map((t: any) => t.text).join(' | ')}\nPromesse: ${wording.positioning?.promise}\nTerritoire: ${wording.positioning?.territory}\nTon: ${wording.personality?.toneOfVoice}\n`
+  return extra
+})()}
 
-Genere une landing page de validation premium. Le but : capturer des emails de personnes reellement interessees.
+IMPORTANT : Lis la conversation et utilise le positionnement EXACT. Genere un JSON structure pour le template de landing page.
 
-A la fin, genere un bloc JSON avec: {"title": "...", "description": "...", "emailPlaceholder": "...", "ctaText": "...", "status": "generated"}`
+Reponds UNIQUEMENT avec un bloc JSON valide.`
       },
       interview: {
         system: `Tu es un expert en customer discovery (methode "The Mom Test" de Rob Fitzpatrick). Tu as conduit 500+ interviews clients pour des startups early-stage.

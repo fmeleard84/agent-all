@@ -15,6 +15,7 @@ import {
   LogOut,
   Moon,
   Sun,
+  Plug,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -27,6 +28,7 @@ const navItems = [
   { href: '/dashboard/emails', label: 'Emails', icon: Mail },
   { href: '/dashboard/accounting', label: 'Comptabilite', icon: Calculator },
   { href: '/dashboard/validations', label: 'Validations', icon: CheckSquare },
+  { href: '/dashboard/connectors', label: 'Connecteurs', icon: Plug },
   { href: '/dashboard/settings', label: 'Parametres', icon: Settings },
 ]
 
@@ -45,7 +47,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-60 min-h-screen border-r bg-card flex flex-col">
+    <aside data-sidebar className="w-60 min-h-screen border-r bg-card flex flex-col">
       <div className="p-6 border-b">
         <h1 className="text-lg font-semibold tracking-tight">Agent All</h1>
         <p className="text-xs text-muted-foreground mt-0.5">AI Operating System</p>

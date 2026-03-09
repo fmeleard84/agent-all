@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   Copy,
   Check,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
   Palette,
@@ -91,6 +90,7 @@ const ACTIONS: ActionConfig[] = [
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-50 dark:bg-blue-950/20',
     borderColor: 'border-blue-200 dark:border-blue-800',
+    dashboardUrl: 'landing',
   },
   {
     key: 'interview',
@@ -265,19 +265,6 @@ function ActionCard({ config, action, onGenerate, onUpload, generating, uploadin
             </>
           )}
 
-          {/* Landing page preview */}
-          {config.key === 'landing' && isGenerated && action?.html && (
-            <button
-              onClick={() => {
-                const w = window.open('', '_blank')
-                if (w) { w.document.write(action.html!); w.document.close() }
-              }}
-              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent transition-colors"
-              title="Voir la landing page"
-            >
-              <ExternalLink className="h-4 w-4" /> Preview
-            </button>
-          )}
         </div>
       </div>
 
