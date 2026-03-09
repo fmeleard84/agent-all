@@ -22,6 +22,16 @@ import {
   Plus,
   X,
   Image as ImageIcon,
+  Zap,
+  Shield,
+  Clock,
+  Star,
+  Target,
+  Heart,
+  Rocket,
+  Check,
+  TrendingUp,
+  Users,
 } from 'lucide-react'
 
 interface LandingSection {
@@ -103,7 +113,11 @@ const SECTION_LABELS: Record<string, string> = {
   emailCapture: 'Capture email',
 }
 
-const ICON_OPTIONS = ['zap', 'shield', 'clock', 'star', 'target', 'heart', 'rocket', 'check', 'trending-up', 'users']
+const ICON_MAP: Record<string, typeof Zap> = {
+  zap: Zap, shield: Shield, clock: Clock, star: Star, target: Target,
+  heart: Heart, rocket: Rocket, check: Check, 'trending-up': TrendingUp, users: Users,
+}
+const ICON_OPTIONS = Object.keys(ICON_MAP)
 
 function SectionToggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) {
   return (
@@ -419,19 +433,27 @@ export default function LandingEditor() {
             {sections.benefits.items.map((item, i) => (
               <div key={i} className="group/ben rounded-lg border bg-card p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <select
-                    value={item.icon}
-                    onChange={e => {
-                      setFieldDirectly(prev => {
-                        const items = [...prev.sections.benefits.items]
-                        items[i] = { ...items[i], icon: e.target.value }
-                        return { ...prev, sections: { ...prev.sections, benefits: { ...prev.sections.benefits, items } } }
-                      })
-                    }}
-                    className="rounded border bg-background px-2 py-1 text-xs"
-                  >
-                    {ICON_OPTIONS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
-                  </select>
+                  <div className="flex flex-wrap gap-1">
+                    {ICON_OPTIONS.map(ic => {
+                      const Ic = ICON_MAP[ic]
+                      return (
+                        <button
+                          key={ic}
+                          onClick={() => {
+                            setFieldDirectly(prev => {
+                              const items = [...prev.sections.benefits.items]
+                              items[i] = { ...items[i], icon: ic }
+                              return { ...prev, sections: { ...prev.sections, benefits: { ...prev.sections.benefits, items } } }
+                            })
+                          }}
+                          className={`p-1.5 rounded-md transition-colors ${item.icon === ic ? 'bg-violet-100 dark:bg-violet-900/40 ring-2 ring-violet-500' : 'hover:bg-muted'}`}
+                          title={ic}
+                        >
+                          <Ic className={`h-4 w-4 ${item.icon === ic ? 'text-violet-600 dark:text-violet-400' : 'text-muted-foreground'}`} />
+                        </button>
+                      )
+                    })}
+                  </div>
                   <button onClick={() => {
                     setFieldDirectly(prev => ({
                       ...prev,
