@@ -119,18 +119,21 @@ const ICON_MAP: Record<string, typeof Zap> = {
 }
 const ICON_OPTIONS = Object.keys(ICON_MAP)
 
-function SectionToggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) {
+function SectionToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void; label?: string }) {
   return (
     <button
       onClick={onToggle}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-        enabled
-          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-          : 'bg-muted text-muted-foreground'
-      }`}
+      className="inline-flex items-center gap-2 group"
+      title={enabled ? 'Desactiver cette section' : 'Activer cette section'}
     >
-      {enabled ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-      {enabled ? 'Active' : 'Desactive'}
+      <div className={`relative h-5 w-9 rounded-full transition-colors ${enabled ? 'bg-emerald-500' : 'bg-muted'}`}>
+        <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${enabled ? 'translate-x-4.5 left-0.5' : 'left-0.5'}`}
+          style={{ transform: enabled ? 'translateX(16px)' : 'translateX(0)' }}
+        />
+      </div>
+      <span className={`text-xs font-medium ${enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+        {enabled ? 'Active' : 'Desactive'}
+      </span>
     </button>
   )
 }
