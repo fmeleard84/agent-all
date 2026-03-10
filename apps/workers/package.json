@@ -17,6 +17,7 @@
     "@agent-all/agent-sdk": "*",
     "@agent-all/agent-registry": "*",
     "@agent-all/workflow-engine": "*",
+    "@agent-all/tool-registry": "*",
     "dotenv": "^16.4.0"
   },
   "devDependencies": {

@@ -11,10 +11,11 @@ COPY packages/agent-sdk/package.json ./packages/agent-sdk/
 COPY packages/agent-registry/package.json ./packages/agent-registry/
 COPY packages/workflow-engine/package.json ./packages/workflow-engine/
 COPY packages/event-bus/package.json ./packages/event-bus/
-RUN npm install --workspace=@agent-all/workers
+COPY packages/tool-registry/package.json ./packages/tool-registry/
+RUN npm ci
 
 FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/ ./
 COPY . .
 RUN npm run build --workspace=packages/types
 RUN npm run build --workspace=packages/database
@@ -23,6 +24,7 @@ RUN npm run build --workspace=packages/agent-sdk
 RUN npm run build --workspace=packages/agent-registry
 RUN npm run build --workspace=packages/workflow-engine
 RUN npm run build --workspace=packages/event-bus
+RUN npm run build --workspace=@agent-all/tool-registry
 RUN npm run build --workspace=@agent-all/workers
 
 FROM base AS runner
