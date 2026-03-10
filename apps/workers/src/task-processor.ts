@@ -1,5 +1,6 @@
 import { Worker, Job } from 'bullmq'
 import { AgentRegistry } from '@agent-all/agent-registry'
+import { ToolRegistry } from '@agent-all/tool-registry'
 import { WorkflowEngine } from '@agent-all/workflow-engine'
 import { getLLMProvider } from '@agent-all/llm'
 import { getSupabaseServiceClient } from '@agent-all/database'
@@ -20,6 +21,7 @@ export class TaskProcessor {
 
   constructor(
     private agentRegistry: AgentRegistry,
+    private toolRegistry: ToolRegistry,
     private redisConnection: { host: string; port: number },
   ) {
     this.workflowEngine = new WorkflowEngine(this.db)
@@ -225,6 +227,10 @@ export class TaskProcessor {
         id: company?.id || '',
         name: company?.name || '',
         settings: company?.settings || {},
+      },
+      tools: this.toolRegistry,
+      credentials: {
+        get: (toolId: string) => this.toolRegistry.getCredentials(companyId, toolId),
       },
     }
   }

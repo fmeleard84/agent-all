@@ -37,6 +37,11 @@ export interface AgentContext {
     agent: AgentMemoryData
   }
   company: CompanyInfo
+  tools?: any       // ToolRegistry — optional for backward compat with existing agents
+  credentials?: {   // CredentialStore helper
+    get: (toolId: string) => Promise<any>
+  }
+  workspace?: { id: string; metadata: Record<string, any> }
 }
 
 export interface LLMProvider {
