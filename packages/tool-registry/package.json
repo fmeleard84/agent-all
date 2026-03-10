@@ -8,7 +8,9 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@agent-all/database": "*"
+    "@agent-all/database": "*",
+    "apify-client": "^2.22.2",
+    "googleapis": "^171.4.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0"
