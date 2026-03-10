@@ -8,6 +8,7 @@ import { WorkspaceModule } from './workspace/workspace.module'
 import { ChatModule } from './chat/chat.module'
 import { QontoModule } from './qonto/qonto.module'
 import { LandingModule } from './landing/landing.module'
+import { ToolsModule } from './tools/tools.module'
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { LandingModule } from './landing/landing.module'
     ChatModule,
     QontoModule,
     LandingModule,
+    ToolsModule,
   ],
 })
 export class AppModule {}
