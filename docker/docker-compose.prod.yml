@@ -17,6 +17,12 @@ services:
       - REDIS_PORT=6379
       - CORS_ORIGIN=https://agent-all.ialla.fr
       - QDRANT_URL=http://host.docker.internal:6333
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=https://agent-all.ialla.fr/api/tools/callback
+      - GOOGLE_SEARCH_API_KEY=${GOOGLE_SEARCH_API_KEY}
+      - GOOGLE_SEARCH_CX=${GOOGLE_SEARCH_CX}
+      - FRONTEND_URL=https://agent-all.ialla.fr
     extra_hosts:
       - "host.docker.internal:host-gateway"
     labels:
@@ -43,6 +49,10 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - QDRANT_URL=http://host.docker.internal:6333
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_SEARCH_API_KEY=${GOOGLE_SEARCH_API_KEY}
+      - GOOGLE_SEARCH_CX=${GOOGLE_SEARCH_CX}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
