@@ -7,7 +7,7 @@ import { getLLMProvider } from '@agent-all/llm'
 import { AgentRegistry } from '@agent-all/agent-registry'
 import { ToolsService } from '../tools/tools.service'
 
-interface PlanStep {
+export interface PlanStep {
   id: string
   agentId: string
   goal: string
