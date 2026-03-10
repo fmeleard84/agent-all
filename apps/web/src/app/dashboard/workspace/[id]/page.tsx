@@ -89,7 +89,7 @@ export default function WorkspacePage() {
     <div className="flex h-[calc(100vh-2rem)] -m-8 border rounded-xl overflow-hidden bg-background">
       <WorkspaceSidebar workspaces={allWorkspaces} />
       <ChatPanel workspaceId={workspace.id} initialMessages={messages} />
-      <ContextPanel workspace={workspace} />
+      <ContextPanel workspace={{ id: workspace.id, axe_type: workspace.axe_type, metadata: workspace.metadata }} />
     </div>
   )
 }

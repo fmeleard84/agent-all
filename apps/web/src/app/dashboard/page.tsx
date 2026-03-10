@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { KpiCard } from '@/components/dashboard/kpi-card'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Mail, FileText, Calculator, AlertCircle, ArrowRight, Lightbulb, Rocket, Building2, Plus, Loader2 } from 'lucide-react'
+import { Mail, FileText, Calculator, AlertCircle, ArrowRight, Lightbulb, Rocket, Building2, Plus, Loader2, BarChart3 } from 'lucide-react'
 
 interface Workspace {
   id: string
@@ -15,6 +15,7 @@ interface Workspace {
   axe_type: 'idea' | 'launch' | 'existing'
   status: string
   created_at: string
+  metadata?: { dashboard?: { scoreTotal?: number; verdict?: string } } | null
 }
 
 const axeConfig: Record<string, { label: string; icon: typeof Lightbulb }> = {
@@ -45,7 +46,7 @@ export default function DashboardPage() {
 
       const { data: userWorkspaces } = await supabase
         .from('workspaces')
-        .select('id, name, axe_type, status, created_at')
+        .select('id, name, axe_type, status, created_at, metadata')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
@@ -130,7 +131,7 @@ export default function DashboardPage() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-900/30 text-violet-600">
                           <Icon className="h-4 w-4" />
                         </div>
                         <div>
@@ -142,7 +143,27 @@ export default function DashboardPage() {
                           </p>
                         </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      {ws.metadata?.dashboard?.scoreTotal ? (
+                        <div className="flex items-center gap-2">
+                          <div className={`text-right ${
+                            ws.metadata.dashboard.scoreTotal >= 60 ? 'text-emerald-600' :
+                            ws.metadata.dashboard.scoreTotal >= 45 ? 'text-blue-600' :
+                            ws.metadata.dashboard.scoreTotal >= 30 ? 'text-amber-600' : 'text-red-600'
+                          }`}>
+                            <div className="text-lg font-bold tabular-nums leading-none">{ws.metadata.dashboard.scoreTotal}</div>
+                            <div className="text-[10px] text-muted-foreground">/80</div>
+                          </div>
+                          <Link
+                            href={`/dashboard/workspace/${ws.id}/report`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-900/30 text-violet-600 hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors"
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                          </Link>
+                        </div>
+                      ) : (
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      )}
                     </div>
                   </CardContent>
                 </Card>

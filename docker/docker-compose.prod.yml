@@ -56,8 +56,12 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         - NEXT_PUBLIC_SUPABASE_URL=https://yojesskmdehepeqkdelp.supabase.co
-        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvamVzc2ttZGVoZXBlcWtkZWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODAyNjMsImV4cCI6MjA4ODU1NjI2M30.WXghewoCnKHxKs_tjolQ0Row5im4fw4Ch2TssyiUs1o
         - NEXT_PUBLIC_API_URL=https://agent-all.ialla.fr/api
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=https://yojesskmdehepeqkdelp.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvamVzc2ttZGVoZXBlcWtkZWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODAyNjMsImV4cCI6MjA4ODU1NjI2M30.WXghewoCnKHxKs_tjolQ0Row5im4fw4Ch2TssyiUs1o
+      - NEXT_PUBLIC_API_URL=https://agent-all.ialla.fr/api
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.agent-all-web.rule=Host(`agent-all.ialla.fr`)"

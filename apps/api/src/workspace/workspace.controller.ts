@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, Req } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req } from '@nestjs/common'
 import { WorkspaceService } from './workspace.service'
 import { SupabaseAuthGuard } from '../auth/auth.guard'
 import type { AxeType } from '@agent-all/types'
@@ -24,6 +24,19 @@ export class WorkspaceController {
   @Get(':id')
   async getWorkspace(@Param('id') id: string) {
     return this.workspaceService.findById(id)
+  }
+
+  @Patch(':id')
+  async updateWorkspace(
+    @Param('id') id: string,
+    @Body() body: { name?: string },
+  ) {
+    return this.workspaceService.rename(id, body.name || '')
+  }
+
+  @Delete(':id')
+  async deleteWorkspace(@Param('id') id: string) {
+    return this.workspaceService.remove(id)
   }
 
   @Get(':id/messages')

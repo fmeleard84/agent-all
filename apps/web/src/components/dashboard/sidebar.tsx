@@ -16,6 +16,7 @@ import {
   Moon,
   Sun,
   Plug,
+  UserPlus,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/dashboard/accounting', label: 'Comptabilite', icon: Calculator },
   { href: '/dashboard/validations', label: 'Validations', icon: CheckSquare },
   { href: '/dashboard/connectors', label: 'Connecteurs', icon: Plug },
+  { href: '/dashboard/contacts', label: 'Contacts / CRM', icon: UserPlus },
   { href: '/dashboard/settings', label: 'Parametres', icon: Settings },
 ]
 

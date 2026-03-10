@@ -136,6 +136,10 @@ export class ChatService {
     const prompt = this.buildActionPrompt(actionType, dashboard, conversationContext, uploadedDocument, metadata)
     if (!prompt) throw new Error(`Unknown action type: ${actionType}`)
 
+    // Actions with large JSON output need more tokens
+    const largeActions = ['salesdeck', 'linkedin', 'instagram', 'landing', 'interview', 'prospects', 'pricing']
+    const maxTokens = largeActions.includes(actionType) ? 12000 : 6000
+
     const stream = await this.openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -143,7 +147,7 @@ export class ChatService {
         { role: 'user', content: prompt.user },
       ],
       temperature: 0.7,
-      max_tokens: 6000,
+      max_tokens: maxTokens,
       stream: true,
     })
 
@@ -291,7 +295,8 @@ Le JSON doit suivre EXACTEMENT cette structure :
     "cta": { "enabled": true, "title": "...", "subtitle": "...", "ctaText": "..." },
     "emailCapture": { "enabled": true, "title": "...", "subtitle": "...", "placeholder": "...", "buttonText": "...", "reassurance": "..." },
     "contactForm": { "enabled": true, "title": "...", "subtitle": "...", "fields": [{ "name": "lastName", "label": "Nom", "type": "text", "required": true }, { "name": "firstName", "label": "Prenom", "type": "text", "required": true }, { "name": "email", "label": "Email", "type": "email", "required": true }, { "name": "phone", "label": "Telephone", "type": "tel", "required": false }, { "name": "message", "label": "Message", "type": "textarea", "required": true }], "buttonText": "...", "successMessage": "..." },
-    "social": { "enabled": true, "title": "Retrouvez-nous", "links": [{ "platform": "linkedin", "url": "" }, { "platform": "instagram", "url": "" }] }
+    "social": { "enabled": true, "title": "Retrouvez-nous", "links": [{ "platform": "linkedin", "url": "" }, { "platform": "instagram", "url": "" }] },
+    "footer": { "enabled": true, "companyName": "...", "email": "", "phone": "", "address": "" }
   },
   "branding": {
     "primaryColor": "${brandPrimary}",
@@ -358,7 +363,46 @@ Validation client: ${clientValidation}
 
 Genere un script d'interview Mom Test SPECIFIQUE a ce projet. Chaque question doit etre taillee pour le client cible identifie dans la conversation.
 
-A la fin, genere un bloc JSON avec: {"intro": "...", "questions": [{"question": "...", "why": "...", "greenFlags": ["..."], "redFlags": ["..."]}], "pitfalls": ["..."], "scoringGrid": {...}, "status": "generated"}`
+A la fin, genere un bloc JSON STRICT avec cette structure exacte:
+\`\`\`json
+{
+  "intro": {
+    "targetProfile": "Qui interviewer (profil exact)",
+    "whereToFind": "Ou trouver ces personnes (canaux precis)",
+    "approachScript": "Phrase d'accroche mot pour mot",
+    "framing": "Comment cadrer l'interview (duree, contexte)"
+  },
+  "questions": [
+    {
+      "question": "La question exacte a poser",
+      "why": "Pourquoi tu poses cette question (quel signal tu cherches)",
+      "greenFlags": ["Reponse positive 1", "Reponse positive 2"],
+      "redFlags": ["Reponse negative 1", "Reponse negative 2"],
+      "followUp": "Question de relance si la reponse est vague"
+    }
+  ],
+  "pitfalls": [
+    {
+      "title": "Nom du piege",
+      "description": "Description du piege et comment l'eviter"
+    }
+  ],
+  "scoringGrid": {
+    "criteria": [
+      { "name": "Nom du critere", "description": "Ce qu'on evalue", "weight": 2 }
+    ],
+    "threshold": 7,
+    "thresholdExplanation": "Ce que signifie un score au-dessus/en-dessous",
+    "minInterviews": 8,
+    "stopRule": "Quand arreter les interviews"
+  },
+  "debrief": {
+    "fields": ["Champ 1 a remplir apres chaque interview", "Champ 2", "Champ 3", "Champ 4", "Champ 5"],
+    "synthesisTemplate": "Comment synthetiser les resultats de toutes les interviews"
+  },
+  "status": "generated"
+}
+\`\`\``
       },
       prospects: {
         system: `Tu es un expert en outbound sales et acquisition early-stage. Tu as aide 100+ startups a trouver leurs premiers clients quand personne ne les connait.
@@ -404,7 +448,54 @@ Plan 10 premiers clients: ${firstTenCustomers}
 
 Genere un plan d'acquisition ULTRA SPECIFIQUE. Des vrais noms de groupes, des vrais messages, des vrais chiffres.
 
-A la fin, genere un bloc JSON avec: {"persona": {...}, "channels": [...], "templates": [...], "sequence": [...], "metrics": {...}, "status": "generated"}`
+A la fin, genere un bloc JSON STRICT avec cette structure exacte:
+\`\`\`json
+{
+  "persona": {
+    "name": "Nom fictif",
+    "age": "Tranche d'age",
+    "role": "Poste / fonction",
+    "company": "Type d'entreprise",
+    "dailyPain": "Sa journee type et ou il a le probleme",
+    "searchBehavior": "Ce qu'il google quand il cherche une solution",
+    "triggerToBuy": "Ce qui le ferait payer demain"
+  },
+  "channels": [
+    {
+      "name": "Nom du canal exact (groupe LinkedIn, subreddit, etc.)",
+      "type": "linkedin|email|community|event|ads",
+      "why": "Pourquoi CE canal pour CE projet",
+      "reachableProspects": "Nombre de prospects atteignables",
+      "cost": "Cout en temps ou argent",
+      "expectedConversion": "Taux de conversion attendu"
+    }
+  ],
+  "templates": [
+    {
+      "channel": "linkedin|email|community",
+      "label": "Nom du template (ex: Message froid LinkedIn)",
+      "subject": "Objet du message si email",
+      "body": "Le texte exact du message mot pour mot",
+      "tips": "Conseils pour maximiser le taux de reponse"
+    }
+  ],
+  "sequence": [
+    {
+      "day": "J+0",
+      "action": "Description de l'action",
+      "channel": "Canal utilise",
+      "message": "Message exact ou angle d'approche"
+    }
+  ],
+  "metrics": {
+    "responseRateByChannel": "Taux de reponse attendu par canal",
+    "dailyContacts": "Nombre de contacts par jour",
+    "targetTimeline": "Delai pour atteindre 10 clients",
+    "pivotSignal": "Quand pivoter si ca ne marche pas"
+  },
+  "status": "generated"
+}
+\`\`\``
       },
       pricing: {
         system: `Tu es un expert en pricing de startups. Tu as aide a definir les modeles de prix de 50+ SaaS/services. Tu connais Van Westendorp, le Conjoint Analysis, et surtout le bon sens terrain.
@@ -448,7 +539,53 @@ Benchmark pricing: ${pricingBenchmark}
 
 Genere une strategie de pricing SPECIFIQUE a ce projet avec des prix concrets, un benchmark reel, et un plan de test.
 
-A la fin, genere un bloc JSON avec: {"benchmark": [...], "options": [...], "recommended": {...}, "testMessage": "...", "testMethod": "...", "evolution": {...}, "status": "generated"}`
+A la fin, genere un bloc JSON STRICT avec cette structure exacte:
+\`\`\`json
+{
+  "benchmark": [
+    {
+      "competitor": "Nom du concurrent",
+      "price": "Leur prix exact",
+      "includes": "Ce qui est inclus",
+      "positioning": "premium|mid|low",
+      "strengths": "Points forts de leur pricing",
+      "weaknesses": "Points faibles"
+    }
+  ],
+  "options": [
+    {
+      "name": "Nom du plan (ex: Starter, Pro, Enterprise)",
+      "price": "Prix exact",
+      "billing": "mensuel|annuel|one-shot",
+      "includes": ["Feature 1 incluse", "Feature 2", "Feature 3"],
+      "targetClient": "Le type de client qui choisirait cette option",
+      "margin": "Marge estimee",
+      "rationale": "Pourquoi ce prix (ancrage psychologique, comparaison marche)"
+    }
+  ],
+  "recommended": {
+    "optionName": "Nom de l'option recommandee",
+    "reasoning": "Raisonnement detaille",
+    "framing": "Comment presenter/annoncer le prix",
+    "objections": [
+      { "objection": "Objection previsible", "response": "Comment y repondre" }
+    ]
+  },
+  "testPlan": {
+    "message": "Message exact a envoyer pour tester le prix",
+    "landingPageTips": "Quoi mettre sur la landing pour valider le prix",
+    "vanWestendorp": ["Question 1", "Question 2", "Question 3", "Question 4"],
+    "minResponses": "Nombre de reponses necessaires"
+  },
+  "evolution": {
+    "launchPrice": "Prix de lancement",
+    "targetPrice12m": "Prix cible a 12 mois",
+    "increaseStrategy": "Quand et comment augmenter",
+    "grandfathering": "Comment traiter les early adopters"
+  },
+  "status": "generated"
+}
+\`\`\``
       },
       tracker: {
         system: `Tu es un expert en metriques de validation startup. Tu sais que 90% des entrepreneurs trackent les mauvaises metriques. Tu aides a se concentrer sur les signaux qui comptent.
@@ -488,6 +625,247 @@ Genere un systeme de tracking de validation ADAPTE a ce projet. Pas de metriques
 
 A la fin, genere un bloc JSON avec: {"metrics": [...], "weeklyTemplate": {...}, "goNoGo": {"go": [...], "pivot": [...], "stop": [...]}, "tools": [...], "timeframe": "...", "status": "generated"}`
       },
+      salesdeck: (() => {
+        const identityData = metadata?.actions?.identity?.structured
+        const wordingData = metadata?.actions?.wording?.structured
+        const landingData = metadata?.actions?.landing?.structured
+        const identityContext = identityData ? `\n\nIDENTITE VISUELLE :\n${JSON.stringify(identityData)}` : ''
+        const wordingContext = wordingData ? `\n\nWORDING & POSTURE :\n${JSON.stringify(wordingData)}` : ''
+
+        // Extract image URLs from landing page if available
+        const heroImage = landingData?.sections?.hero?.imageUrl || ''
+        const solutionImage = landingData?.sections?.solution?.imageUrl || ''
+        const imagesContext = (heroImage || solutionImage)
+          ? `\n\nIMAGES DISPONIBLES (de la landing page) :\n- Hero: ${heroImage}\n- Solution: ${solutionImage}\nUtilise ces URLs dans le champ "imageUrl" des slides appropriees.`
+          : ''
+
+        return {
+          system: `Tu es un expert en presentations commerciales et pitch decks. Tu as cree des decks pour des startups YC, des levees de fonds Series A, et des cycles de vente B2B.
+
+REGLE ABSOLUE : Lis TOUTE la conversation et TOUTES les donnees fournies (identite, wording, analyse). Le deck doit etre 100% aligne avec le positionnement et l'identite de marque.
+
+Tu dois generer DEUX presentations structurees en JSON :
+
+## 1. SALES DECK CLIENT (10-12 slides)
+Objectif : convaincre un client d'acheter
+
+Structure :
+- Slide 1 — Titre : logo, slogan, promesse
+- Slide 2 — Le probleme : faire dire "oui c'est exactement ca"
+- Slide 3 — Contexte marche : montrer que le probleme est reel
+- Slide 4 — La solution : expliquer simplement
+- Slide 5 — Demo produit : visuels, captures, mockups
+- Slide 6 — Benefices client : parler en benefices, pas en features
+- Slide 7 — Cas d'usage : exemple concret
+- Slide 8 — Resultats attendus : meme estimes
+- Slide 9 — Les offres : pricing clair
+- Slide 10 — Mise en place : rassurer sur la simplicite
+- Slide 11 — Offre pilote : puissant pour convertir
+- Slide 12 — Call to action : toujours finir par une action
+
+## 2. PITCH DECK INVESTISSEUR (10 slides)
+Objectif : convaincre d'investir
+
+Structure :
+- Slide 1 — Vision
+- Slide 2 — Le probleme
+- Slide 3 — La solution
+- Slide 4 — Le produit (visuels)
+- Slide 5 — Marche (TAM/SAM/SOM)
+- Slide 6 — Business model
+- Slide 7 — Traction
+- Slide 8 — Concurrence (avantage competitif)
+- Slide 9 — Roadmap
+- Slide 10 — Equipe
+- Slide 11 — Levee de fonds (objectifs)
+
+Pour CHAQUE slide, fournis :
+- title : titre de la slide
+- subtitle : sous-titre optionnel
+- content : texte principal (2-4 bullet points)
+- notes : notes du presentateur
+- visualType : "text" | "chart" | "image" | "comparison" | "pricing" | "timeline"
+- imageUrl : URL d'une image si disponible (utilise les images de la landing page quand c'est pertinent)
+- imagePlaceholder : si pas d'imageUrl, description de l'image/visuel suggeree pour cette slide (ex: "Photo d'equipe souriante", "Graphique de croissance", "Screenshot du produit")
+
+UTILISE les couleurs et fonts de l'identite visuelle si disponibles.
+UTILISE le ton et le wording definis dans la posture de marque.
+
+Reponds UNIQUEMENT avec un bloc \`\`\`json. Pas de texte avant ou apres.
+Reponds en francais.`,
+          user: `${fullContext}${identityContext}${wordingContext}${imagesContext}
+
+Genere les deux decks de presentation pour ce projet.
+
+Le JSON DOIT suivre cette structure :
+\`\`\`json
+{
+  "salesDeck": {
+    "title": "Sales Deck - [Nom du projet]",
+    "slides": [
+      { "title": "...", "subtitle": "...", "content": ["..."], "notes": "...", "visualType": "text", "imageUrl": "", "imagePlaceholder": "Description du visuel suggere" }
+    ]
+  },
+  "pitchDeck": {
+    "title": "Pitch Deck - [Nom du projet]",
+    "slides": [
+      { "title": "...", "subtitle": "...", "content": ["..."], "notes": "...", "visualType": "text", "imageUrl": "", "imagePlaceholder": "Description du visuel suggere" }
+    ]
+  },
+  "branding": {
+    "primaryColor": "${identityData?.colorPalette?.primary?.hex || '#7c3aed'}",
+    "secondaryColor": "${identityData?.colorPalette?.secondary?.hex || '#a78bfa'}",
+    "accentColor": "${identityData?.colorPalette?.accent?.hex || '#f59e0b'}",
+    "headingFont": "${identityData?.typography?.headingFont || 'Inter'}",
+    "bodyFont": "${identityData?.typography?.bodyFont || 'Inter'}"
+  },
+  "status": "generated"
+}
+\`\`\``
+        }
+      })(),
+      linkedin: (() => {
+        const identityData = metadata?.actions?.identity?.structured
+        const wordingData = metadata?.actions?.wording?.structured
+        const identityContext = identityData ? `\n\nIDENTITE VISUELLE :\n${JSON.stringify(identityData)}` : ''
+        const wordingContext = wordingData ? `\n\nWORDING & POSTURE :\n${JSON.stringify(wordingData)}` : ''
+
+        return {
+          system: `Tu es un expert en content marketing LinkedIn. Tu as gere les comptes de fondateurs qui generent 100K+ impressions/mois. Tu connais l'algorithme LinkedIn et ce qui engage.
+
+REGLE ABSOLUE : Lis TOUTE la conversation et TOUTES les donnees fournies. Chaque post doit refleter l'identite, le ton et le positionnement de CE projet.
+
+Tu dois generer 10 posts LinkedIn structures en JSON :
+
+## TYPES DE POSTS A GENERER :
+1. Post de lancement / teasing (storytelling personnel)
+2. Post educatif (partager une expertise du domaine)
+3. Post probleme/solution (montrer qu'on comprend la douleur)
+4. Post behind-the-scenes (montrer la construction)
+5. Post chiffre/statistique (credibiliser avec des donnees)
+6. Post testimonial/social proof (meme fictif mais realiste)
+7. Post controverse/opinion tranchee (generer du debat)
+8. Post astuce/hack (valeur immediate pour le lecteur)
+9. Post carousel (contenu slide par slide)
+10. Post question/engagement (faire reagir la communaute)
+
+Pour CHAQUE post :
+- type : le type de post
+- hook : la premiere ligne accrocheuse (CRITIQUE pour l'algo LinkedIn)
+- body : le corps du post (avec sauts de ligne, emojis strategiques)
+- cta : le call-to-action de fin
+- hashtags : 3-5 hashtags pertinents
+- bestTime : meilleur moment pour publier
+- visualSuggestion : description du visuel a creer pour accompagner le post
+- estimatedReach : portee estimee (faible/moyenne/forte)
+
+UTILISE le ton de voix et le lexique de la marque.
+UTILISE les couleurs et la direction artistique pour les suggestions visuelles.
+
+Reponds UNIQUEMENT avec un bloc \`\`\`json. Pas de texte avant ou apres.
+Reponds en francais.`,
+          user: `${fullContext}${identityContext}${wordingContext}
+
+Genere 10 posts LinkedIn prets a publier pour ce projet. Chaque post doit etre unique, engageant et aligne avec l'identite de marque.
+
+Le JSON DOIT suivre cette structure :
+\`\`\`json
+{
+  "posts": [
+    {
+      "type": "...",
+      "hook": "...",
+      "body": "...",
+      "cta": "...",
+      "hashtags": ["..."],
+      "bestTime": "...",
+      "visualSuggestion": "...",
+      "estimatedReach": "forte|moyenne|faible"
+    }
+  ],
+  "strategy": {
+    "postingFrequency": "...",
+    "bestDays": ["..."],
+    "contentMix": "...",
+    "growthTips": ["..."]
+  },
+  "status": "generated"
+}
+\`\`\``
+        }
+      })(),
+      instagram: (() => {
+        const identityData = metadata?.actions?.identity?.structured
+        const wordingData = metadata?.actions?.wording?.structured
+        const identityContext = identityData ? `\n\nIDENTITE VISUELLE :\n${JSON.stringify(identityData)}` : ''
+        const wordingContext = wordingData ? `\n\nWORDING & POSTURE :\n${JSON.stringify(wordingData)}` : ''
+
+        return {
+          system: `Tu es un expert en strategie de contenu Instagram. Tu as fait passer des comptes de 0 a 50K followers. Tu connais les formats qui marchent : Reels, carousels, stories.
+
+REGLE ABSOLUE : Lis TOUTE la conversation et TOUTES les donnees fournies. Chaque post doit refleter l'identite visuelle et le positionnement de CE projet.
+
+Tu dois generer 10 publications Instagram structures en JSON :
+
+## TYPES DE PUBLICATIONS A GENERER :
+1. Carousel educatif (5-7 slides avec texte)
+2. Reel script (video courte avec hook + contenu)
+3. Post image avec caption storytelling
+4. Carousel before/after ou probleme/solution
+5. Reel tendance adaptee au secteur
+6. Post citation/phrase forte de la marque
+7. Story interactive (sondage, quiz, question)
+8. Carousel infographie/chiffres cles
+9. Reel behind-the-scenes
+10. Post UGC/testimonial inspire
+
+Pour CHAQUE publication :
+- type : "carousel" | "reel" | "post" | "story"
+- caption : le texte de la publication
+- slides : si carousel, le contenu de chaque slide (titre + texte)
+- reelScript : si reel, le script (hook, contenu, cta, duree)
+- visualDescription : description detaillee du visuel a creer
+- colorScheme : couleurs a utiliser (basees sur l'identite)
+- hashtags : 10-15 hashtags (mix populaires + niches)
+- bestTime : meilleur moment pour publier
+- estimatedReach : portee estimee
+
+UTILISE les couleurs EXACTES de la charte graphique pour les visuels.
+UTILISE le ton de voix de la marque pour les captions.
+
+Reponds UNIQUEMENT avec un bloc \`\`\`json. Pas de texte avant ou apres.
+Reponds en francais.`,
+          user: `${fullContext}${identityContext}${wordingContext}
+
+Genere 10 publications Instagram pretes a publier pour ce projet. Mix de formats (carousels, reels, posts, stories). Tout doit etre aligne avec l'identite visuelle.
+
+Le JSON DOIT suivre cette structure :
+\`\`\`json
+{
+  "publications": [
+    {
+      "type": "carousel|reel|post|story",
+      "caption": "...",
+      "slides": [{"title": "...", "text": "..."}],
+      "reelScript": {"hook": "...", "content": "...", "cta": "...", "duration": "15s|30s|60s"},
+      "visualDescription": "...",
+      "colorScheme": {"primary": "#...", "secondary": "#...", "text": "#..."},
+      "hashtags": ["..."],
+      "bestTime": "...",
+      "estimatedReach": "forte|moyenne|faible"
+    }
+  ],
+  "strategy": {
+    "postingFrequency": "...",
+    "contentPillars": ["..."],
+    "hashtagStrategy": "...",
+    "growthTips": ["..."]
+  },
+  "status": "generated"
+}
+\`\`\``
+        }
+      })(),
       competitive: {
         system: `Tu es un analyste strategique specialise en veille concurrentielle pour startups. Tu as conseille 200+ entreprises sur leur positionnement face a la concurrence.
 

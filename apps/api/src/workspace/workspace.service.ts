@@ -77,6 +77,33 @@ export class WorkspaceService {
     return data as unknown as ChatMessage
   }
 
+  async rename(workspaceId: string, name: string): Promise<Workspace> {
+    const { data, error } = await this.db
+      .from('workspaces')
+      .update({ name })
+      .eq('id', workspaceId)
+      .select()
+      .single()
+
+    if (error || !data) throw new Error(`Failed to rename workspace: ${error?.message}`)
+    return data as unknown as Workspace
+  }
+
+  async remove(workspaceId: string): Promise<void> {
+    // Delete messages first, then workspace
+    await this.db
+      .from('chat_messages')
+      .delete()
+      .eq('workspace_id', workspaceId)
+
+    const { error } = await this.db
+      .from('workspaces')
+      .delete()
+      .eq('id', workspaceId)
+
+    if (error) throw new Error(`Failed to delete workspace: ${error.message}`)
+  }
+
   async updateMetadata(workspaceId: string, metadata: Record<string, any>): Promise<Workspace> {
     // Fetch existing metadata first to merge
     const existing = await this.findById(workspaceId)

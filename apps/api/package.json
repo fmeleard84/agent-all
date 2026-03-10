@@ -17,7 +17,7 @@
     "@agent-all/rag": "*",
     "@agent-all/types": "*",
     "@agent-all/workflow-engine": "*",
-    "@fastify/multipart": "^9.4.0",
+    "@fastify/multipart": "^8.3.1",
     "@nestjs/bullmq": "^10.2.0",
     "@nestjs/common": "^10.4.0",
     "@nestjs/config": "^3.2.0",

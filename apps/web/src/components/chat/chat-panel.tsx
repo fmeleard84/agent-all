@@ -192,6 +192,7 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
             role={msg.role}
             content={msg.content}
             createdAt={msg.created_at}
+            workspaceId={workspaceId}
           />
         ))}
 
@@ -236,8 +237,8 @@ export function ChatPanel({ workspaceId, initialMessages }: ChatPanelProps) {
               onKeyDown={handleKeyDown}
               placeholder="Votre message..."
               disabled={loading}
-              rows={1}
-              className="flex-1 resize-none border-0 bg-transparent px-2 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+              rows={3}
+              className="flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 min-h-[60px]"
             />
             <button
               onClick={() => sendMessage(input)}

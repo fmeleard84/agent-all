@@ -100,6 +100,13 @@ interface SocialSection extends LandingSection {
   links: { platform: string; url: string }[]
 }
 
+interface FooterSection extends LandingSection {
+  companyName: string
+  email: string
+  phone: string
+  address: string
+}
+
 interface LandingData {
   sections: {
     hero: HeroSection
@@ -111,6 +118,7 @@ interface LandingData {
     emailCapture: EmailCaptureSection
     contactForm: ContactFormSection
     social: SocialSection
+    footer: FooterSection
   }
   branding: {
     primaryColor: string
@@ -133,6 +141,7 @@ const SECTION_LABELS: Record<string, string> = {
   emailCapture: 'Capture email',
   contactForm: 'Formulaire de contact',
   social: 'Reseaux sociaux',
+  footer: 'Footer',
 }
 
 const ICON_MAP: Record<string, typeof Zap> = {
@@ -383,6 +392,12 @@ export default function LandingEditor() {
             className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
           >
             <ExternalLink className="h-4 w-4" /> Preview
+          </Link>
+          <Link
+            href={`/dashboard/workspace/${params.id}/contacts`}
+            className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors"
+          >
+            <Users className="h-4 w-4" /> Contacts
           </Link>
           <button
             onClick={handleExportPdf}
@@ -768,6 +783,35 @@ export default function LandingEditor() {
                 <Plus className="h-3 w-3" /> Ajouter un reseau
               </button>
             </div>
+          </SectionCard>
+        )}
+
+        {/* Footer */}
+        {sections.footer && (
+          <SectionCard
+            title="Footer"
+            enabled={sections.footer.enabled}
+            onToggle={() => updateField('sections.footer.enabled', !sections.footer.enabled)}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24 shrink-0">Entreprise</span>
+                <EditableText value={sections.footer.companyName || ''} onChange={v => updateField('sections.footer.companyName', v)} as="span" className="text-sm" placeholder="Nom de l'entreprise" />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24 shrink-0">Email</span>
+                <EditableText value={sections.footer.email || ''} onChange={v => updateField('sections.footer.email', v)} as="span" className="text-sm" placeholder="contact@example.com" />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24 shrink-0">Telephone</span>
+                <EditableText value={sections.footer.phone || ''} onChange={v => updateField('sections.footer.phone', v)} as="span" className="text-sm" placeholder="+33 1 23 45 67 89" />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24 shrink-0">Adresse</span>
+                <EditableText value={sections.footer.address || ''} onChange={v => updateField('sections.footer.address', v)} as="span" className="text-sm" placeholder="123 rue Example, 75001 Paris" />
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground italic">Seuls les champs remplis seront affiches sur la landing page.</p>
           </SectionCard>
         )}
       </div>

@@ -7,6 +7,7 @@ import { OrchestratorModule } from './orchestrator/orchestrator.module'
 import { WorkspaceModule } from './workspace/workspace.module'
 import { ChatModule } from './chat/chat.module'
 import { QontoModule } from './qonto/qonto.module'
+import { LandingModule } from './landing/landing.module'
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { QontoModule } from './qonto/qonto.module'
     WorkspaceModule,
     ChatModule,
     QontoModule,
+    LandingModule,
   ],
 })
 export class AppModule {}

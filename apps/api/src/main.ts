@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify'
 import { AppModule } from './app.module'
-import multipart from '@fastify/multipart'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const multipart = require('@fastify/multipart')
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
