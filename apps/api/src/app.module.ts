@@ -10,6 +10,7 @@ import { QontoModule } from './qonto/qonto.module'
 import { LandingModule } from './landing/landing.module'
 import { ToolsModule } from './tools/tools.module'
 import { PlannerModule } from './planner/planner.module'
+import { AgentsModule } from './agents/agents.module'
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PlannerModule } from './planner/planner.module'
     LandingModule,
     ToolsModule,
     PlannerModule,
+    AgentsModule,
   ],
 })
 export class AppModule {}
